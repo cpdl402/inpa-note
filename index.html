@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>いんぱ手帳</title>
+<style>
+  :root{
+    --surface-0:#f7f5fb; --surface-1:#fdfcff; --surface-2:#ffffff;
+    --text-primary:#241c33; --text-secondary:#5c536b; --text-muted:#948b9f;
+    --gridline:#e6e1ef; --baseline:#cfc7dd; --border:rgba(36,28,51,0.10);
+    --brand:#ff6f91; --brand-ink:#ffffff; --brand-weak:#ffe1ea;
+    --gold:#f5a623; --gold-ink:#3a2600;
+    --warn:#e8970b; --warn-weak:#fff3e0; --warn-ink:#7a4a00;
+    --good:#0ca30c; --critical:#d03b3b;
+    --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#008300; --c7:#4a3aa7; --c8:#e34948;
+    --radius:16px;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-0:#18131f; --surface-1:#211a2b; --surface-2:#2a2236;
+      --text-primary:#ffffff; --text-secondary:#c9c0d6; --text-muted:#948b9f;
+      --gridline:#332a42; --baseline:#463a58; --border:rgba(255,255,255,0.10);
+      --brand:#ff8fab; --brand-ink:#241c33; --brand-weak:#4a2836;
+      --gold:#f5a623; --gold-ink:#2a1c00;
+      --warn:#ffb14d; --warn-weak:#4a3414; --warn-ink:#ffdca8;
+      --good:#0ca30c; --critical:#e66767;
+      --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --c8:#e66767;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--surface-0); color:var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  body.no-chrome{ padding-bottom:0; }
+  a,button,input,select,textarea{font-family:inherit;}
+  .app-shell{max-width:560px; margin:0 auto; min-height:100vh; position:relative;}
+
+  /* ==== ヘッダー ==== */
+  .app-header{
+    position:sticky; top:0; z-index:5; background:var(--surface-0);
+    padding:14px 16px 10px; border-bottom:1px solid var(--border);
+  }
+  .app-header h1{font-size:18px; margin:0; font-weight:800;}
+  .app-header .sub{font-size:12px; color:var(--text-muted); margin-top:2px;}
+  .role-badge{
+    display:inline-block; font-size:10px; font-weight:700; padding:1px 8px; border-radius:999px;
+    margin-left:6px; vertical-align:1px;
+  }
+  .role-badge.admin{background:var(--gold); color:var(--gold-ink);}
+  .role-badge.general{background:var(--gridline); color:var(--text-secondary);}
+
+  .screen{display:none; padding:16px 16px 28px;}
+  .screen.active{display:block;}
+
+  /* ==== 認証画面（ログイン／新規登録） ==== */
+  .auth-wrap{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:100vh; padding:32px 20px; text-align:center;
+  }
+  .auth-logo{
+    width:64px; height:64px; border-radius:50%; background:var(--brand); color:var(--brand-ink);
+    display:flex; align-items:center; justify-content:center; margin-bottom:14px;
+    box-shadow:0 6px 18px rgba(255,111,145,0.35);
+  }
+  .auth-title{font-size:22px; font-weight:800; margin:0 0 2px;}
+  .auth-subtitle{font-size:13px; color:var(--text-muted); margin:0 0 24px;}
+  .auth-card{
+    width:100%; max-width:360px; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:var(--radius); padding:22px 20px; text-align:left;
+  }
+  .auth-card .field{margin-bottom:16px;}
+  .auth-card .field label{display:block; font-size:12px; color:var(--text-muted); margin-bottom:6px; font-weight:700;}
+  .auth-card select{
+    width:100%; padding:13px 12px; border-radius:12px; border:1px solid var(--border);
+    background:var(--surface-1); color:var(--text-primary); font-size:15px;
+  }
+  .pin-input{
+    width:100%; padding:13px 12px; border-radius:12px; border:1px solid var(--border);
+    background:var(--surface-1); color:var(--text-primary); font-size:22px; letter-spacing:10px;
+    text-align:center; font-variant-numeric:tabular-nums;
+  }
+  .input-error{border-color:var(--critical) !important;}
+  .error-text{color:var(--critical); font-size:12px; margin:8px 0 0; min-height:16px;}
+  .auth-links{margin-top:16px; text-align:center; font-size:13px;}
+  .link-btn{background:none; border:none; color:var(--brand); font-size:13px; font-weight:700; cursor:pointer; padding:6px 4px;}
+
+  /* ==== 共通ボタン ==== */
+  .btn{flex:1; padding:14px; border-radius:12px; border:none; font-size:15px; font-weight:700; cursor:pointer;}
+  .btn.primary{background:var(--brand); color:var(--brand-ink);}
+  .btn.primary:disabled{opacity:0.5;}
+  .btn.danger{background:transparent; color:var(--critical); border:1px solid var(--critical);}
+  .btn.ghost{background:var(--surface-2); color:var(--text-primary); border:1px solid var(--border);}
+  .btn.warn{background:var(--warn); color:#2a1700;}
+  @media (prefers-color-scheme: dark){ .btn.warn{ color:#2a1700; } }
+  .btn:active{transform:scale(0.98);}
+  .btn-row{display:flex; gap:10px; margin-top:6px;}
+  .btn-icon{display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%;}
+
+  /* ==== ホーム：統計ヒーロー ==== */
+  .home-greet{font-size:13px; color:var(--text-secondary); margin-bottom:14px;}
+  .stat-hero{
+    background:linear-gradient(135deg, var(--brand) 0%, #ffa6bd 100%); color:#fff;
+    border-radius:var(--radius); padding:20px; margin-bottom:16px; position:relative; overflow:hidden;
+  }
+  @media (prefers-color-scheme: dark){
+    .stat-hero{ background:linear-gradient(135deg, #7a3c53 0%, #4a2836 100%); color:#fff; }
+  }
+  .stat-hero .label{font-size:12px; opacity:0.9; font-weight:700;}
+  .stat-hero .value{font-size:40px; font-weight:800; line-height:1.1; margin:4px 0 6px;}
+  .stat-hero .value small{font-size:16px; font-weight:700;}
+  .stat-hero .delta{font-size:12px; opacity:0.92;}
+
+  .section-title{font-size:13px; font-weight:700; color:var(--text-secondary); margin:20px 0 10px; display:flex; align-items:center; justify-content:space-between;}
+  .hint{font-size:12px; color:var(--text-muted);}
+  .empty-hint{text-align:center; padding:32px 0; color:var(--text-muted); font-size:13px;}
+
+  /* ==== 記録カード ==== */
+  .record-card{
+    display:flex; gap:10px; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:var(--radius); padding:12px; margin-bottom:10px; cursor:pointer; align-items:center;
+  }
+  .record-card:active{transform:scale(0.99);}
+  .record-dot{
+    flex:none; width:14px; height:14px; border-radius:50%; margin-top:5px; cursor:pointer;
+    box-shadow:0 0 0 3px var(--surface-0);
+  }
+  .record-info{flex:1; min-width:0;}
+  .record-date{font-size:12px; color:var(--text-muted); margin-bottom:2px; font-variant-numeric:tabular-nums;}
+  .record-park{font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .record-sub{font-size:12px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;}
+  .record-amount{flex:none; font-size:14px; font-weight:700; text-align:right; font-variant-numeric:tabular-nums;}
+  .record-amount .unit{font-size:10px; font-weight:400; color:var(--text-muted);}
+  .badge-show{
+    display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px;
+    background:var(--gold); color:var(--gold-ink); margin-top:4px;
+  }
+
+  /* ==== 年送りナビ ==== */
+  .year-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .year-nav .label{font-size:17px; font-weight:800;}
+  .icon-btn{
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text-primary);
+    width:38px; height:38px; border-radius:11px; font-size:17px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .icon-btn:active{transform:scale(0.95);}
+  .back-btn{width:auto; padding:0 14px; margin-bottom:14px; font-size:14px; white-space:nowrap;}
+
+  /* ==== 記録一覧：絞り込みパネル ==== */
+  .filter-bar{margin-bottom:10px;}
+  .filter-toggle-btn{
+    display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border);
+    color:var(--text-secondary); font-size:13px; font-weight:700; padding:9px 14px; border-radius:11px; cursor:pointer;
+  }
+  .filter-toggle-btn.on{color:var(--brand); border-color:var(--brand);}
+  .filter-toggle-btn .chev{transition:transform .15s;}
+  .filter-toggle-btn.open .chev{transform:rotate(180deg);}
+  .filter-count-badge{
+    background:var(--brand); color:var(--brand-ink); font-size:10.5px; font-weight:800;
+    min-width:18px; height:18px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 5px;
+  }
+  .filter-panel{
+    background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px; margin-top:8px; margin-bottom:4px;
+  }
+  .filter-group{margin-bottom:12px;}
+  .filter-group:last-of-type{margin-bottom:0;}
+  .filter-group-label{font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; padding:9px 14px; border-radius:999px;
+    border:1.5px solid var(--border); background:var(--surface-1); color:var(--text-secondary);
+    font-size:13px; font-weight:700; cursor:pointer; min-height:36px;
+  }
+  .chip .chip-dot{width:8px; height:8px; border-radius:50%; flex:none;}
+  .chip.active{background:var(--brand); color:var(--brand-ink); border-color:var(--brand);}
+  .chip.active .chip-dot{background:var(--brand-ink) !important;}
+  .filter-clear-btn{
+    width:100%; margin-top:12px; padding:10px; border-radius:11px; border:none; background:transparent;
+    color:var(--critical); font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .records-legend{
+    display:flex; flex-wrap:wrap; gap:10px 14px; margin-bottom:12px; padding:2px 2px;
+  }
+  .legend-chip{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-muted); cursor:pointer;}
+  .legend-chip .dot{width:9px; height:9px; border-radius:50%; flex:none;}
+
+  /* ==== グラフ共通 ==== */
+  .chart-card{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:16px;}
+  .chart-card h3{margin:0 0 2px; font-size:14px; font-weight:700;}
+  .chart-card .chart-sub{font-size:11px; color:var(--text-muted); margin-bottom:12px;}
+
+  .donut-wrap{display:flex; gap:18px; align-items:center; flex-wrap:wrap;}
+  .donut-svg-wrap{position:relative; flex:none; width:150px; height:150px;}
+  .donut-svg-wrap svg{width:100%; height:100%; display:block;}
+  .donut-center{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .donut-center .num{font-size:24px; font-weight:800; line-height:1;}
+  .donut-center .unit{font-size:10px; color:var(--text-muted); margin-top:2px;}
+  .legend-list{flex:1; min-width:150px; display:flex; flex-direction:column; gap:8px;}
+  .legend-row{display:flex; align-items:center; gap:8px; font-size:12.5px; cursor:pointer;}
+  .legend-swatch{flex:none; width:11px; height:11px; border-radius:3px;}
+  .legend-name{flex:1; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .legend-value{flex:none; color:var(--text-secondary); font-variant-numeric:tabular-nums;}
+
+  .yearbar-chart{display:flex; align-items:flex-end; gap:14px; height:130px; padding-top:20px;}
+  .yearbar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; cursor:pointer;}
+  .yearbar-value{font-size:11px; font-weight:700; color:var(--text-secondary); margin-bottom:4px; font-variant-numeric:tabular-nums;}
+  .yearbar-bar{width:100%; max-width:34px; border-radius:6px 6px 2px 2px; transition:opacity .15s;}
+  .yearbar-label{font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;}
+  .yearbar-label.on{color:var(--text-primary);}
+
+  .parkbar-row{margin-bottom:12px;}
+  .parkbar-row:last-child{margin-bottom:0;}
+  .parkbar-head{display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px;}
+  .parkbar-head .name{color:var(--text-primary); font-weight:700;}
+  .parkbar-head .meta{color:var(--text-muted); font-variant-numeric:tabular-nums;}
+  .parkbar-track{background:var(--gridline); border-radius:5px; height:10px; overflow:hidden;}
+  .parkbar-fill{height:100%; border-radius:5px 2px 2px 5px; cursor:pointer;}
+
+  /* ==== FAB / ボトムナビ ==== */
+  .fab{
+    position:fixed; right:calc(50% - 280px + 18px); bottom:calc(84px + env(safe-area-inset-bottom));
+    width:58px; height:58px; border-radius:50%; background:var(--brand); color:var(--brand-ink);
+    border:none; font-size:28px; box-shadow:0 6px 16px rgba(255,111,145,0.4); cursor:pointer; z-index:6;
+    display:none;
+  }
+  .fab.show{display:flex; align-items:center; justify-content:center;}
+  @media (max-width:600px){ .fab{ right:20px; } }
+  .fab:active{transform:scale(0.94);}
+
+  .bottom-nav{
+    position:fixed; left:0; right:0; bottom:0; z-index:6;
+    background:var(--surface-1); border-top:1px solid var(--border);
+    display:flex; padding-bottom:env(safe-area-inset-bottom);
+    max-width:560px; margin:0 auto;
+  }
+  .nav-btn{
+    flex:1; background:none; border:none; padding:11px 0 8px; cursor:pointer;
+    color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; font-weight:700;
+  }
+  .nav-btn.active{color:var(--brand);}
+
+  /* ==== モーダル ==== */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(20,10,25,0.45); z-index:20;
+    align-items:flex-end; justify-content:center;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal{
+    background:var(--surface-1); width:100%; max-width:560px; border-radius:20px 20px 0 0;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom)); max-height:88vh; overflow-y:auto;
+  }
+  .modal.center{border-radius:var(--radius); margin-bottom:auto; margin-top:auto;}
+  .modal h2{margin:0 0 16px; font-size:16px; font-weight:800;}
+  .modal p{font-size:13.5px; color:var(--text-secondary); line-height:1.6;}
+  .field{margin-bottom:14px;}
+  .field.hidden{display:none;}
+  .field label{display:block; font-size:12px; color:var(--text-muted); margin-bottom:6px; font-weight:700;}
+  .field label .req{color:var(--brand); margin-left:2px;}
+  .field input[type=text], .field input[type=number], .field input[type=date],
+  .field input[type=password], .field select, .field textarea{
+    width:100%; padding:12px 12px; border-radius:11px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text-primary); font-size:15px;
+  }
+  .field textarea{resize:vertical; min-height:56px; font-family:inherit;}
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+  .modal-actions{display:flex; gap:10px; margin-top:8px;}
+
+  /* ==== 設定画面 ==== */
+  .settings-block{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:16px;}
+  .settings-block h3{margin:0 0 4px; font-size:14px; font-weight:800;}
+  .settings-block p.hint{margin:6px 0 0;}
+  .user-row{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+  .user-avatar{
+    flex:none; width:44px; height:44px; border-radius:50%; background:var(--brand-weak); color:var(--brand);
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;
+  }
+  .user-name{font-size:15px; font-weight:800;}
+
+  .tabs{display:flex; gap:8px; margin-bottom:14px;}
+  .tab-btn{
+    flex:1; padding:9px 4px; border-radius:10px; border:1px solid var(--border); background:var(--surface-1);
+    color:var(--text-secondary); font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .tab-btn.on{background:var(--brand); color:var(--brand-ink); border-color:transparent;}
+
+  .master-item{
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; padding:13px 0; border-bottom:1px solid var(--gridline);
+  }
+  .master-item:last-child{border-bottom:none;}
+  .master-item-main{display:flex; align-items:center; gap:10px; flex:1; min-width:0;}
+  .reorder-btns{display:flex; flex-direction:column; gap:4px; flex:none;}
+  .reorder-btn{
+    width:38px; height:30px; border-radius:9px; border:1px solid var(--border); background:var(--surface-1);
+    color:var(--text-secondary); font-size:13px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .reorder-btn:disabled{opacity:0.28; pointer-events:none;}
+  .reorder-btn:active{transform:scale(0.93);}
+  .master-item-text{flex:1; min-width:0; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .master-item .name{font-size:14.5px; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .master-item .name.inactive{color:var(--text-muted); text-decoration:line-through;}
+  .badge-status{flex:none; font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px;}
+  .badge-status.active{background:rgba(12,163,12,0.14); color:var(--good);}
+  .badge-status.inactive{background:var(--gridline); color:var(--text-muted);}
+  .master-item-actions{display:flex; gap:4px; flex:none; margin-left:auto;}
+  .master-item .mini-btn{
+    flex:none; background:none; border:none; color:var(--text-secondary); font-size:12.5px; font-weight:700;
+    padding:8px 8px; cursor:pointer; min-height:36px;
+  }
+  .master-item .mini-btn.danger-text{color:var(--critical);}
+  .add-master-btn{
+    width:100%; margin-top:12px; padding:11px; border-radius:11px; border:1.5px dashed var(--border);
+    background:transparent; color:var(--brand); font-weight:700; font-size:13.5px; cursor:pointer;
+  }
+
+  /* ==== 警告ダイアログ（アンバー系、削除確認(赤)とは別トーン） ==== */
+  .warn-modal{border-top:4px solid var(--warn); text-align:center;}
+  .warn-icon{
+    width:48px; height:48px; border-radius:50%; background:var(--warn-weak); color:var(--warn);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 12px;
+  }
+  .warn-modal p{text-align:left;}
+
+  /* ==== 画像出力プレビュー ==== */
+  .output-preview{
+    background:var(--surface-0); border-radius:12px; overflow:hidden; margin-bottom:14px;
+    max-height:60vh; display:flex; justify-content:center;
+  }
+  .output-preview canvas{width:100%; height:auto; display:block;}
+
+  .toast{
+    position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
+    background:var(--text-primary); color:var(--surface-1); padding:10px 18px; border-radius:12px;
+    font-size:13px; z-index:50; opacity:0; pointer-events:none; transition:opacity .2s; max-width:86%; text-align:center;
+  }
+  .toast.show{opacity:0.95;}
+
+  .mockup-note{font-size:11px; color:var(--text-muted); text-align:center; margin:18px 0 4px;}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ================= ログイン ================= -->
+  <section class="screen active" id="screen-login">
+    <div class="auth-wrap">
+      <div class="auth-logo">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.9 7.4.5-5.7 4.8 1.9 7.2L12 16.9 5.8 20.9l1.9-7.2L2 8.9l7.4-.5z"/></svg>
+      </div>
+      <h1 class="auth-title">いんぱ手帳</h1>
+      <p class="auth-subtitle">ディズニーパーク入園記録</p>
+      <div class="auth-card">
+        <div class="field">
+          <label>ユーザー</label>
+          <select id="loginUserSelect"></select>
+        </div>
+        <div class="field">
+          <label>暗証番号（4桁）</label>
+          <input type="password" class="pin-input" id="loginPin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••">
+        </div>
+        <p class="error-text" id="loginError"></p>
+        <button class="btn primary" style="width:100%;" onclick="handleLogin()">ログイン</button>
+        <div class="auth-links">
+          <button class="link-btn" onclick="openRegisterScreen()">新規登録はこちら</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 新規登録 ================= -->
+  <section class="screen" id="screen-register">
+    <div class="auth-wrap" style="min-height:auto; padding-top:12px;">
+      <div style="width:100%; max-width:360px;">
+        <button class="icon-btn back-btn" onclick="navigate('login')">‹ 戻る</button>
+      </div>
+      <h1 class="auth-title" style="font-size:19px;">新規登録</h1>
+      <p class="auth-subtitle">名前と暗証番号（4桁）を設定してください</p>
+      <div class="auth-card">
+        <div class="field">
+          <label>名前</label>
+          <input type="text" id="regName" placeholder="例）やまだ">
+        </div>
+        <div class="field">
+          <label>暗証番号（4桁）</label>
+          <input type="password" class="pin-input" id="regPin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••">
+        </div>
+        <div class="field">
+          <label>暗証番号（確認用）</label>
+          <input type="password" class="pin-input" id="regPinConfirm" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••">
+        </div>
+        <p class="error-text" id="regError"></p>
+        <button class="btn primary" style="width:100%;" onclick="handleRegister()">登録する</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ホーム ================= -->
+  <section class="screen" id="screen-home">
+    <div class="home-greet" id="homeGreet"></div>
+    <div class="stat-hero">
+      <div class="label" id="homeHeroLabel">今年の合計インパ数</div>
+      <div class="value" id="homeHeroValue">0<small>イン</small></div>
+      <div class="delta" id="homeHeroDelta"></div>
+    </div>
+
+    <div class="section-title">パーク分類別内訳</div>
+    <div class="chart-card" id="homeDonutCard"></div>
+
+    <div class="section-title">
+      <span>直近の記録</span>
+      <button class="link-btn" style="padding:0;" onclick="navigate('records')">すべて見る ›</button>
+    </div>
+    <div id="homeRecentList"></div>
+  </section>
+
+  <!-- ================= 記録一覧・追加/編集 ================= -->
+  <section class="screen" id="screen-records">
+    <div class="year-nav">
+      <button class="icon-btn" onclick="shiftRecordsYear(-1)">‹</button>
+      <div class="label" id="recordsYearLabel"></div>
+      <button class="icon-btn" onclick="shiftRecordsYear(1)">›</button>
+    </div>
+    <div class="filter-bar">
+      <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleFilterPanel()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+        絞り込み
+        <span class="filter-count-badge" id="filterCountBadge" style="display:none;"></span>
+        <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+    </div>
+    <div class="filter-panel" id="filterPanel" style="display:none;">
+      <div class="filter-group">
+        <div class="filter-group-label">パーク</div>
+        <div class="chip-row" id="filterParkChips"></div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-group-label">パスポート種別</div>
+        <div class="chip-row" id="filterPassTypeChips"></div>
+      </div>
+      <button class="filter-clear-btn" onclick="clearRecordFilters()">すべて解除</button>
+    </div>
+    <div class="records-legend" id="recordsLegend"></div>
+    <div id="recordsList"></div>
+  </section>
+
+  <!-- ================= 集計 ================= -->
+  <section class="screen" id="screen-summary">
+    <div class="field" style="margin-bottom:18px;">
+      <label>表示する年</label>
+      <select id="summaryYearSelect" onchange="onSummaryYearChange()"></select>
+    </div>
+
+    <div class="chart-card">
+      <h3>年別イン数の推移</h3>
+      <div class="chart-sub">タップすると回数が表示されます</div>
+      <div class="yearbar-chart" id="summaryCountChart"></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>年別金額の推移</h3>
+      <div class="chart-sub">タップすると金額が表示されます</div>
+      <div class="yearbar-chart" id="summaryMoneyChart"></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>パーク別内訳の詳細</h3>
+      <div class="chart-sub" id="summaryParkScopeLabel"></div>
+      <div id="summaryParkBreakdown"></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>年間まとめ画像</h3>
+      <div class="chart-sub">選択中の年の合計・内訳・金額を1枚の画像にまとめます</div>
+      <button class="btn primary btn-icon" onclick="generateYearSummaryImage()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        年間まとめ画像を作る
+      </button>
+    </div>
+  </section>
+
+  <!-- ================= 設定 ================= -->
+  <section class="screen" id="screen-settings">
+    <div class="settings-block">
+      <div class="user-row">
+        <div class="user-avatar" id="settingsAvatar"></div>
+        <div>
+          <div class="user-name" id="settingsUserName"></div>
+          <span class="role-badge" id="settingsRoleBadge"></span>
+        </div>
+      </div>
+      <button class="btn ghost" style="width:100%;" onclick="handleLogout()">ログアウト</button>
+    </div>
+
+    <div class="settings-block" id="masterAdminBlock" style="display:none;">
+      <h3>マスタ管理</h3>
+      <p class="hint" style="margin-bottom:12px;">パーク・パスポート種別・当選ショー施設の一覧を管理できます（管理者のみ表示）。</p>
+      <div class="tabs" id="masterTabs"></div>
+      <div id="masterList"></div>
+      <button class="add-master-btn" onclick="openMasterItemModal(null)">＋ 新規追加</button>
+    </div>
+
+    <div class="settings-block" id="masterGeneralBlock" style="display:none;">
+      <h3>マスタ管理</h3>
+      <p class="hint">パーク・パスポート種別・当選ショー施設の管理は管理者のみ利用できます。</p>
+    </div>
+
+    <div class="settings-block">
+      <h3>このアプリについて</h3>
+      <p class="hint">ディズニーパークへの入園記録（インパ）を年ごとに記録・集計できます。「イン」は入園1回分を数える単位です。</p>
+    </div>
+  </section>
+
+  <button class="fab" id="fab" onclick="openRecordModal(null)">＋</button>
+
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-btn active" data-screen="home" onclick="navigate('home')" aria-label="ホーム">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>ホーム</span>
+    </button>
+    <button class="nav-btn" data-screen="records" onclick="navigate('records')" aria-label="記録">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="6" x2="21" y2="6"></line>
+        <line x1="8" y1="12" x2="21" y2="12"></line>
+        <line x1="8" y1="18" x2="21" y2="18"></line>
+        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+      </svg>
+      <span>記録</span>
+    </button>
+    <button class="nav-btn" data-screen="summary" onclick="navigate('summary')" aria-label="集計">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"></line>
+        <line x1="12" y1="20" x2="12" y2="4"></line>
+        <line x1="6" y1="20" x2="6" y2="14"></line>
+      </svg>
+      <span>集計</span>
+    </button>
+    <button class="nav-btn" data-screen="settings" onclick="navigate('settings')" aria-label="設定">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+      <span>設定</span>
+    </button>
+  </nav>
+</div>
+
+<!-- 記録の登録・編集モーダル -->
+<div class="modal-overlay" id="recordModal">
+  <div class="modal">
+    <h2 id="recordModalTitle">記録を追加</h2>
+    <div class="field">
+      <label>日付<span class="req">必須</span></label>
+      <input type="date" id="rDate">
+    </div>
+    <div class="field">
+      <label>パーク<span class="req">必須</span></label>
+      <select id="rPark"></select>
+    </div>
+    <div class="field">
+      <label>パスポート種別<span class="req">必須</span></label>
+      <select id="rPassType"></select>
+    </div>
+    <div class="field">
+      <label>金額（任意）</label>
+      <input type="number" id="rAmount" placeholder="例）9900" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>当選ショー施設（任意）</label>
+      <select id="rShow" onchange="onShowSelectChange()"></select>
+    </div>
+    <div class="field hidden" id="rSeatField">
+      <label>座席位置（任意）</label>
+      <input type="text" id="rSeat" placeholder="例）2階中央 B列12番">
+    </div>
+    <p class="error-text" id="recordError"></p>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeRecordModal()">キャンセル</button>
+      <button class="btn primary" onclick="submitRecordForm()">保存</button>
+    </div>
+    <div class="modal-actions" id="recordImageRow" style="display:none;">
+      <button class="btn ghost btn-icon" onclick="generateRecordCardImage()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        この記録の画像を作る
+      </button>
+    </div>
+    <div class="modal-actions" id="recordDeleteRow" style="display:none;">
+      <button class="btn danger" style="width:100%;" onclick="deleteCurrentRecord()">この記録を削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- マスタ項目の追加・編集モーダル -->
+<div class="modal-overlay" id="masterItemModal">
+  <div class="modal">
+    <h2 id="masterItemModalTitle">項目を追加</h2>
+    <div class="field">
+      <label>名称<span class="req">必須</span></label>
+      <input type="text" id="masterItemName" placeholder="例）東京ディズニーランド">
+    </div>
+    <div class="field hidden" id="masterItemCategoryField">
+      <label>分類</label>
+      <input type="text" id="masterItemCategory" list="masterItemCategoryOptions" placeholder="例）陸">
+      <datalist id="masterItemCategoryOptions">
+        <option value="陸">
+        <option value="海">
+        <option value="海外">
+        <option value="その他">
+      </datalist>
+    </div>
+    <p class="error-text" id="masterItemError"></p>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeMasterItemModal()">キャンセル</button>
+      <button class="btn primary" onclick="submitMasterItemForm()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 汎用確認ダイアログ -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal center" style="max-width:340px;">
+    <h2 id="confirmModalTitle">確認</h2>
+    <p id="confirmModalMessage"></p>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeConfirmModal()">キャンセル</button>
+      <button class="btn danger" id="confirmModalYesBtn" onclick="confirmModalYes()">実行する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 注意喚起ダイアログ（アンバー系。削除確認(赤)とは別トーン、ブロックはしない） -->
+<div class="modal-overlay" id="warnModal">
+  <div class="modal center warn-modal" style="max-width:340px;">
+    <div class="warn-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+    </div>
+    <h2 id="warnModalTitle">同じ日付の記録があります</h2>
+    <p id="warnModalMessage"></p>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeWarnModal()">キャンセル</button>
+      <button class="btn warn" id="warnModalYesBtn" onclick="warnModalYes()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 画像出力プレビュー（単発記録カード／年間まとめ画像 共通） -->
+<div class="modal-overlay" id="outputModal">
+  <div class="modal">
+    <h2>画像を出力</h2>
+    <div class="output-preview"><canvas id="outputCanvas"></canvas></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeOutputModal()">閉じる</button>
+      <a class="btn primary" id="outputDownloadBtn" style="text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center;">ダウンロード</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // 【重要・GAS配信時の制約】GASのWebアプリとして配信すると、<script>内で生の"//"を含む
+  // 文字列（https://... 等のURLリテラル）が行コメント開始とみなされ、行末まで削除される不具合が
+  // 花火大会管理アプリで確認されている。今後Coding段階でAPIエンドポイントURL等を扱う際は、
+  // 生の"//"を書かず const SLASH2 = '/' + '/'; のように分割して組み立てること。
+  // （このDesign段階のモックアップは通信を行わないため該当箇所は無いが、将来のための注意書き）
+
+  /* ============================================================
+   * 1. GASバックエンド接続設定・通信ヘルパー
+   * ============================================================ */
+  // ↓↓↓ GASを「ウェブアプリ」としてデプロイした後に発行されるURL（.../exec）に書き換えること
+  const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwTnGBrsE0nJfF9eVNn9fR_c0DRUd_QyhQsVEBnQ3GKCcXOMbtpHW693PnqlXqaPfgS/exec';
+
+  async function apiGet(resource, params){
+    try{
+      const qs = new URLSearchParams(Object.assign({resource}, params||{})).toString();
+      const res = await fetch(SHEET_API_URL + '?' + qs);
+      return await res.json();
+    }catch(e){
+      console.error(e);
+      return { ok:false, error:'通信に失敗しました' };
+    }
+  }
+  async function apiPost(resource, action, payload){
+    try{
+      const body = Object.assign({resource, action}, payload||{});
+      const res = await fetch(SHEET_API_URL, {
+        method:'POST',
+        headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      });
+      return await res.json();
+    }catch(e){
+      console.error(e);
+      return { ok:false, error:'通信に失敗しました' };
+    }
+  }
+
+  // マスタ・記録データ（ログイン後にサーバーから取得してここに保持する。フィールド名は
+  // Code.gsのシート列名にそのまま合わせてある：isActive / seatPosition 等）
+  let MASTER_PARKS = [];
+  let MASTER_PASSTYPES = [];
+  let MASTER_SHOWS = [];
+  let userRecordsCache = [];
+  let LOGIN_USERS = []; // ログイン画面のプルダウン用（id/name/roleのみ、PIN情報は含まない）
+
+  const MASTER_MAP = { parks: () => MASTER_PARKS, passTypes: () => MASTER_PASSTYPES, shows: () => MASTER_SHOWS };
+  const MASTER_LABELS = { parks:'パーク', passTypes:'パスポート種別', shows:'当選ショー施設' };
+  // マスタ種別ごとのMasters APIアクション名の接尾辞（create/update/delete + この接尾辞）
+  const MASTER_ACTION_SUFFIX = { parks:'Park', passTypes:'PassType', shows:'Show' };
+
+  const CHART_COLORS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)','var(--c8)'];
+
+  const TODAY = new Date();
+  const CURRENT_YEAR = TODAY.getFullYear();
+
+  const SESSION_KEY = 'inpa-session';
+  function saveSession(user){ try{ localStorage.setItem(SESSION_KEY, JSON.stringify(user)); }catch(e){ console.warn('localStorage unavailable', e); } }
+  function loadSession(){ try{ const raw = localStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+  function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){ /* noop */ } }
+
+  /** ログイン中ユーザーのマスタ・記録一覧をまとめて取得する。ログイン成功時・自動ログイン時に呼ぶ。 */
+  async function loadAppData(){
+    const [parksRes, passTypesRes, showsRes, recordsRes] = await Promise.all([
+      apiGet('Masters', {action:'listParks'}),
+      apiGet('Masters', {action:'listPassTypes'}),
+      apiGet('Masters', {action:'listShows'}),
+      apiGet('Records', {action:'list', userId: state.currentUser.id})
+    ]);
+    MASTER_PARKS = parksRes.ok ? parksRes.data : [];
+    MASTER_PASSTYPES = passTypesRes.ok ? passTypesRes.data : [];
+    MASTER_SHOWS = showsRes.ok ? showsRes.data : [];
+    userRecordsCache = recordsRes.ok ? recordsRes.data : [];
+    if(!parksRes.ok || !passTypesRes.ok || !showsRes.ok || !recordsRes.ok){
+      toast('データの取得に一部失敗しました');
+    }
+  }
+  /** マスタ一覧のみ再取得する（マスタ管理画面での追加・編集・無効化後に呼ぶ）。 */
+  async function reloadMasters(){
+    const [parksRes, passTypesRes, showsRes] = await Promise.all([
+      apiGet('Masters', {action:'listParks'}),
+      apiGet('Masters', {action:'listPassTypes'}),
+      apiGet('Masters', {action:'listShows'})
+    ]);
+    if(parksRes.ok) MASTER_PARKS = parksRes.data;
+    if(passTypesRes.ok) MASTER_PASSTYPES = passTypesRes.data;
+    if(showsRes.ok) MASTER_SHOWS = showsRes.data;
+  }
+  /** ログイン中ユーザーの記録一覧のみ再取得する（記録の追加・編集・削除後に呼ぶ）。 */
+  async function reloadRecords(){
+    const res = await apiGet('Records', {action:'list', userId: state.currentUser.id});
+    if(res.ok) userRecordsCache = res.data;
+  }
+  async function loadLoginUsers(preselectId){
+    const res = await apiGet('Auth', {action:'listUsers'});
+    LOGIN_USERS = res.ok ? res.data : [];
+    populateLoginUserSelect(preselectId);
+  }
+
+  /* ============================================================
+   * 2. 状態・共通ユーティリティ
+   * ============================================================ */
+  const state = {
+    screen: 'login',
+    currentUser: null,
+    recordsYear: CURRENT_YEAR,
+    summaryYearFilter: 'all',
+    editingRecordId: null,
+    masterTab: 'parks',
+    editingMasterId: null,
+    confirmCallback: null,
+    warnCallback: null,
+    filterPanelOpen: false,
+    recordFilters: { parks: [], passTypes: [] }
+  };
+
+  function escapeHtml(str){
+    if(str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, function(ch){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+    });
+  }
+  // マスタ名（パーク名等）は管理者が自由入力するため、アポストロフィを含む名称
+  // （例: 実在するパーク名にありがちな "'s" 表記）が来ても inline onclick="toast('...')"
+  // が壊れないよう、HTMLエンティティ化ではなくJS文字列としてエスケープしてから埋め込む。
+  function jsAttrEscape(str){
+    return String(str)
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+  function toast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+  }
+  function findActive(list){ return list.filter(function(x){ return x.isActive; }); }
+  function findById(list, id){ return list.find(function(x){ return x.id === id; }) || null; }
+  function formatDateShort(dateStr){
+    if(!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    const w = ['日','月','火','水','木','金','土'][d.getDay()];
+    return dateStr.replace(/-/g,'/') + '（' + w + '）';
+  }
+  // 警告ダイアログの文言用（例: 2026年8月15日）
+  function formatDateJp(dateStr){
+    if(!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+  }
+  // Code.gs側の仕様で「金額未入力」は0として保存されるため、0も未入力（—表示）として扱う。
+  function formatMoney(n){
+    if(!n) return '—';
+    return Number(n).toLocaleString('ja-JP') + '円';
+  }
+  // ==== 安定配色ロジック（並べ替え機能の追加に備え、マスタの並び順に依存しない固定マッピングにする）====
+  // 「アクティブなマスタ一覧内の並び順（配列インデックス）」で色を決めていた旧実装は、
+  // マスタ管理の並べ替え（▲▼）を行うと既存記録のグラフ配色が変動してしまう問題があったため、
+  // パークは「id文字列のハッシュ」、カテゴリは「よく使う名称の固定テーブル＋未知の名称はハッシュ」で
+  // 固定的に色を決定する。ホームのドーナツ・集計の棒グラフ・一覧の色ドット・画像生成すべてで共通利用する。
+  function hashColorIndex(str){
+    const s = String(str || '');
+    let sum = 0;
+    for(let i = 0; i < s.length; i++){ sum += s.charCodeAt(i); }
+    return sum % CHART_COLORS.length;
+  }
+  function parkColor(parkId){
+    return CHART_COLORS[hashColorIndex(parkId)];
+  }
+  const CATEGORY_FALLBACK = 'その他';
+  function parkCategory(parkId){
+    const p = findById(MASTER_PARKS, parkId);
+    return (p && p.category) ? p.category : CATEGORY_FALLBACK;
+  }
+  // よく使うカテゴリ名は固定の色インデックス（0始まり、c1〜c8に対応）を割り当てる。
+  // テーブルに無い新規カテゴリ名は、文字列から決定的に算出したハッシュ値でc1〜c8のいずれかに固定する。
+  const CATEGORY_COLOR_INDEX = { '陸':0, '海':2, '海外':1, 'その他':3 };
+  function categoryColor(cat){
+    const name = cat || CATEGORY_FALLBACK;
+    const idx = CATEGORY_COLOR_INDEX.hasOwnProperty(name) ? CATEGORY_COLOR_INDEX[name] : hashColorIndex(name);
+    return CHART_COLORS[idx];
+  }
+  // 記録一覧の凡例表示用：よく使う4分類を優先し、残りは出現順で続ける。
+  function legendCategories(){
+    const preferred = ['陸','海','海外','その他'];
+    const present = [];
+    findActive(MASTER_PARKS).forEach(function(p){
+      const cat = p.category || CATEGORY_FALLBACK;
+      if(present.indexOf(cat) === -1) present.push(cat);
+    });
+    const ordered = preferred.filter(function(c){ return present.indexOf(c) !== -1; });
+    present.forEach(function(c){ if(ordered.indexOf(c) === -1) ordered.push(c); });
+    return ordered;
+  }
+  function parkName(parkId){
+    const p = findById(MASTER_PARKS, parkId);
+    return p ? p.name : '（不明なパーク）';
+  }
+  function passTypeName(id){
+    const t = findById(MASTER_PASSTYPES, id);
+    return t ? t.name : '';
+  }
+  function showName(id){
+    if(!id) return '';
+    const s = findById(MASTER_SHOWS, id);
+    return s ? s.name : '';
+  }
+  function userRecords(){
+    return userRecordsCache;
+  }
+  function recordsOfYear(year){
+    return userRecords().filter(function(r){ return new Date(r.date + 'T00:00:00').getFullYear() === year; });
+  }
+  function yearsWithData(){
+    const set = {};
+    userRecords().forEach(function(r){ set[new Date(r.date+'T00:00:00').getFullYear()] = true; });
+    const years = Object.keys(set).map(Number);
+    if(years.indexOf(CURRENT_YEAR) === -1) years.push(CURRENT_YEAR);
+    years.sort(function(a,b){ return a-b; });
+    return years;
+  }
+
+  /* ============================================================
+   * 3. 画面遷移
+   * ============================================================ */
+  const AUTH_SCREENS = ['login','register'];
+  const TITLES = { home:'ホーム', records:'記録', summary:'集計', settings:'設定' };
+
+  window.navigate = function(screen){
+    state.screen = screen;
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    document.getElementById('screen-' + screen).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.screen === screen); });
+
+    const isAuth = AUTH_SCREENS.indexOf(screen) !== -1;
+    document.body.classList.toggle('no-chrome', isAuth);
+    document.getElementById('bottomNav').style.display = isAuth ? 'none' : '';
+    document.getElementById('fab').classList.toggle('show', !isAuth && (screen === 'home' || screen === 'records'));
+
+    if(screen === 'home') refreshHome();
+    if(screen === 'records') refreshRecords();
+    if(screen === 'summary') refreshSummary();
+    if(screen === 'settings') refreshSettings();
+    window.scrollTo(0,0);
+  };
+
+  window.shiftRecordsYear = function(delta){ state.recordsYear += delta; refreshRecords(); };
+
+  /* ============================================================
+   * 4. ログイン・新規登録
+   * ============================================================ */
+  function populateLoginUserSelect(preselectId){
+    const sel = document.getElementById('loginUserSelect');
+    sel.innerHTML = LOGIN_USERS.map(function(u){
+      const roleLabel = u.role === 'admin' ? '（管理者）' : '';
+      return '<option value="' + u.id + '">' + escapeHtml(u.name + roleLabel) + '</option>';
+    }).join('');
+    if(preselectId) sel.value = preselectId;
+  }
+
+  window.openRegisterScreen = function(){
+    document.getElementById('regName').value = '';
+    document.getElementById('regPin').value = '';
+    document.getElementById('regPinConfirm').value = '';
+    document.getElementById('regError').textContent = '';
+    navigate('register');
+  };
+
+  window.handleLogin = async function(){
+    const errEl = document.getElementById('loginError');
+    const userId = document.getElementById('loginUserSelect').value;
+    const pin = document.getElementById('loginPin').value.trim();
+    if(!userId){ errEl.textContent = 'ユーザーを選択してください'; return; }
+    const res = await apiPost('Auth', 'login', { userId:userId, pin:pin });
+    if(!res.ok){
+      errEl.textContent = res.error || '暗証番号が正しくありません';
+      document.getElementById('loginPin').classList.add('input-error');
+      return;
+    }
+    errEl.textContent = '';
+    document.getElementById('loginPin').classList.remove('input-error');
+    document.getElementById('loginPin').value = '';
+    state.currentUser = { id: res.data.userId, name: res.data.name, role: res.data.role };
+    saveSession(state.currentUser);
+    state.recordsYear = CURRENT_YEAR;
+    state.summaryYearFilter = 'all';
+    toast(state.currentUser.name + 'さん、ようこそ！');
+    await loadAppData();
+    navigate('home');
+  };
+
+  window.handleRegister = async function(){
+    const errEl = document.getElementById('regError');
+    const name = document.getElementById('regName').value.trim();
+    const pin = document.getElementById('regPin').value.trim();
+    const pinConfirm = document.getElementById('regPinConfirm').value.trim();
+    if(!name){ errEl.textContent = '名前を入力してください'; return; }
+    if(!/^[0-9]{4}$/.test(pin)){ errEl.textContent = '暗証番号は4桁の数字で入力してください'; return; }
+    if(pin !== pinConfirm){ errEl.textContent = '確認用の暗証番号が一致しません'; return; }
+    const res = await apiPost('Auth', 'register', { name:name, pin:pin });
+    if(!res.ok){ errEl.textContent = res.error || '登録に失敗しました'; return; }
+    errEl.textContent = '';
+    // 登録完了と同時に自動ログインする（Design段階の「登録→ログイン画面に戻る」から変更）
+    state.currentUser = { id: res.data.userId, name: res.data.name, role: res.data.role };
+    saveSession(state.currentUser);
+    state.recordsYear = CURRENT_YEAR;
+    state.summaryYearFilter = 'all';
+    toast(state.currentUser.name + 'さんを登録しました');
+    await loadAppData();
+    navigate('home');
+  };
+
+  window.handleLogout = function(){
+    showConfirm('ログアウトしますか？', async function(){
+      state.currentUser = null;
+      clearSession();
+      MASTER_PARKS = []; MASTER_PASSTYPES = []; MASTER_SHOWS = []; userRecordsCache = [];
+      await loadLoginUsers();
+      navigate('login');
+    }, 'ログアウト');
+  };
+
+  /* ============================================================
+   * 5. ホーム画面
+   * ============================================================ */
+  function refreshHome(){
+    if(!state.currentUser) return;
+    const u = state.currentUser;
+    document.getElementById('homeGreet').textContent = CURRENT_YEAR + '年 ・ ' + u.name + 'さん（' + (u.role === 'admin' ? '管理者' : '一般') + '）';
+
+    const thisYear = recordsOfYear(CURRENT_YEAR);
+    const lastYear = recordsOfYear(CURRENT_YEAR - 1);
+    document.getElementById('homeHeroValue').innerHTML = thisYear.length + '<small>イン</small>';
+    const diff = thisYear.length - lastYear.length;
+    let deltaText = '前年（' + (CURRENT_YEAR-1) + '年）は ' + lastYear.length + 'イン';
+    if(diff !== 0) deltaText += '（' + (diff > 0 ? '+' : '') + diff + '）';
+    document.getElementById('homeHeroDelta').textContent = deltaText;
+
+    renderDonutCard(document.getElementById('homeDonutCard'), thisYear, CURRENT_YEAR + '年の記録がありません');
+
+    const recent = userRecords().slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).slice(0,3);
+    const listEl = document.getElementById('homeRecentList');
+    if(recent.length === 0){
+      listEl.innerHTML = '<div class="empty-hint">まだ記録がありません。右下の「＋」から追加しましょう。</div>';
+    } else {
+      listEl.innerHTML = recent.map(function(r){ return recordCardHtml(r); }).join('');
+    }
+  }
+
+  function renderDonutCard(container, records, emptyMsg){
+    if(records.length === 0){
+      container.innerHTML = '<div class="empty-hint">' + escapeHtml(emptyMsg) + '</div>';
+      return;
+    }
+    const byCategory = {};
+    records.forEach(function(r){
+      const cat = parkCategory(r.parkId);
+      byCategory[cat] = (byCategory[cat] || 0) + 1;
+    });
+    const total = records.length;
+    const segments = Object.keys(byCategory).map(function(cat){
+      return { name: cat, value: byCategory[cat], color: categoryColor(cat) };
+    }).sort(function(a,b){ return b.value - a.value; });
+
+    const size = 150, r = 60, cx = 75, cy = 75, circumference = 2 * Math.PI * r, gap = 3;
+    let offsetAcc = 0;
+    const circles = segments.map(function(seg){
+      const len = (seg.value / total) * circumference;
+      const dash = Math.max(len - gap, 1);
+      const circle = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + seg.color + '" stroke-width="20" ' +
+        'stroke-dasharray="' + dash + ' ' + (circumference - dash) + '" stroke-dashoffset="' + (-offsetAcc) + '" ' +
+        'transform="rotate(-90 ' + cx + ' ' + cy + ')" stroke-linecap="round" style="cursor:pointer" ' +
+        'onclick="toast(\'' + jsAttrEscape(seg.name) + '：' + seg.value + 'イン\')"></circle>';
+      offsetAcc += len;
+      return circle;
+    }).join('');
+
+    const legend = segments.map(function(seg){
+      const pct = Math.round((seg.value / total) * 100);
+      return '<div class="legend-row" onclick="toast(\'' + jsAttrEscape(seg.name) + '：' + seg.value + 'イン（' + pct + '%）\')">' +
+        '<span class="legend-swatch" style="background:' + seg.color + '"></span>' +
+        '<span class="legend-name">' + escapeHtml(seg.name) + '</span>' +
+        '<span class="legend-value">' + seg.value + 'イン（' + pct + '%）</span></div>';
+    }).join('');
+
+    container.innerHTML =
+      '<div class="donut-wrap">' +
+        '<div class="donut-svg-wrap">' +
+          '<svg viewBox="0 0 ' + size + ' ' + size + '">' + circles + '</svg>' +
+          '<div class="donut-center"><div class="num">' + total + '</div><div class="unit">イン</div></div>' +
+        '</div>' +
+        '<div class="legend-list">' + legend + '</div>' +
+      '</div>';
+  }
+
+  function recordCardHtml(r){
+    const showBadge = r.showId ? '<div class="badge-show">当選：' + escapeHtml(showName(r.showId)) + '</div>' : '';
+    return '<div class="record-card" onclick="openRecordModal(\'' + r.id + '\')">' +
+      '<div class="record-info">' +
+        '<div class="record-date">' + formatDateShort(r.date) + '</div>' +
+        '<div class="record-park">' + escapeHtml(parkName(r.parkId)) + '</div>' +
+        '<div class="record-sub">' + escapeHtml(passTypeName(r.passTypeId)) + '</div>' +
+        showBadge +
+      '</div>' +
+      '<div class="record-amount">' + formatMoney(r.amount) + '</div>' +
+    '</div>';
+  }
+
+  /* ============================================================
+   * 6. 記録一覧・追加/編集
+   * ============================================================ */
+  function applyRecordFilters(list){
+    const f = state.recordFilters;
+    return list.filter(function(r){
+      if(f.parks.length > 0 && f.parks.indexOf(r.parkId) === -1) return false;
+      if(f.passTypes.length > 0 && f.passTypes.indexOf(r.passTypeId) === -1) return false;
+      return true;
+    });
+  }
+
+  function refreshRecords(){
+    document.getElementById('recordsYearLabel').textContent = state.recordsYear + '年';
+    renderFilterPanel();
+    renderRecordsLegend();
+    const yearList = recordsOfYear(state.recordsYear).slice().sort(function(a,b){ return a.date.localeCompare(b.date); });
+    const list = applyRecordFilters(yearList);
+    const listEl = document.getElementById('recordsList');
+    if(yearList.length === 0){
+      listEl.innerHTML = '<div class="empty-hint">' + state.recordsYear + '年の記録はまだありません。</div>';
+      return;
+    }
+    if(list.length === 0){
+      listEl.innerHTML = '<div class="empty-hint">絞り込み条件に一致する記録がありません。</div>';
+      return;
+    }
+    listEl.innerHTML = list.map(function(r){ return recordListRowHtml(r); }).join('');
+  }
+
+  function recordListRowHtml(r){
+    const showBadge = r.showId ? '<div class="badge-show">当選：' + escapeHtml(showName(r.showId)) + '</div>' : '';
+    const cat = parkCategory(r.parkId);
+    const dotColor = categoryColor(cat);
+    return '<div class="record-card" onclick="openRecordModal(\'' + r.id + '\')">' +
+      '<span class="record-dot" style="background:' + dotColor + '" onclick="event.stopPropagation(); toast(\'' + jsAttrEscape(cat) + '\')"></span>' +
+      '<div class="record-info">' +
+        '<div class="record-date">' + formatDateShort(r.date) + '</div>' +
+        '<div class="record-park">' + escapeHtml(parkName(r.parkId)) + '</div>' +
+        '<div class="record-sub">' + escapeHtml(passTypeName(r.passTypeId)) + (r.seatPosition ? '　・　' + escapeHtml(r.seatPosition) : '') + '</div>' +
+        showBadge +
+      '</div>' +
+      '<div class="record-amount">' + formatMoney(r.amount) + '</div>' +
+    '</div>';
+  }
+
+  /* ---- 記録一覧：フィルタパネル ---- */
+  window.toggleFilterPanel = function(){
+    state.filterPanelOpen = !state.filterPanelOpen;
+    document.getElementById('filterPanel').style.display = state.filterPanelOpen ? '' : 'none';
+    document.getElementById('filterToggleBtn').classList.toggle('open', state.filterPanelOpen);
+  };
+  function updateFilterCountBadge(){
+    const count = state.recordFilters.parks.length + state.recordFilters.passTypes.length;
+    const badge = document.getElementById('filterCountBadge');
+    const btn = document.getElementById('filterToggleBtn');
+    if(count > 0){
+      badge.textContent = String(count);
+      badge.style.display = '';
+      btn.classList.add('on');
+    } else {
+      badge.style.display = 'none';
+      btn.classList.remove('on');
+    }
+  }
+  function renderFilterPanel(){
+    const parkChipsEl = document.getElementById('filterParkChips');
+    const passChipsEl = document.getElementById('filterPassTypeChips');
+    parkChipsEl.innerHTML = findActive(MASTER_PARKS).map(function(p){
+      const on = state.recordFilters.parks.indexOf(p.id) !== -1;
+      return '<button type="button" class="chip' + (on ? ' active' : '') + '" onclick="toggleParkFilter(\'' + p.id + '\')">' +
+        '<span class="chip-dot" style="background:' + parkColor(p.id) + '"></span>' + escapeHtml(p.name) + '</button>';
+    }).join('') || '<span class="hint">パークが登録されていません</span>';
+    passChipsEl.innerHTML = findActive(MASTER_PASSTYPES).map(function(t){
+      const on = state.recordFilters.passTypes.indexOf(t.id) !== -1;
+      return '<button type="button" class="chip' + (on ? ' active' : '') + '" onclick="togglePassTypeFilter(\'' + t.id + '\')">' + escapeHtml(t.name) + '</button>';
+    }).join('') || '<span class="hint">パスポート種別が登録されていません</span>';
+    updateFilterCountBadge();
+  }
+  window.toggleParkFilter = function(id){
+    const arr = state.recordFilters.parks;
+    const i = arr.indexOf(id);
+    if(i === -1) arr.push(id); else arr.splice(i, 1);
+    refreshRecords();
+  };
+  window.togglePassTypeFilter = function(id){
+    const arr = state.recordFilters.passTypes;
+    const i = arr.indexOf(id);
+    if(i === -1) arr.push(id); else arr.splice(i, 1);
+    refreshRecords();
+  };
+  window.clearRecordFilters = function(){
+    state.recordFilters = { parks: [], passTypes: [] };
+    refreshRecords();
+  };
+
+  /* ---- 記録一覧：分類の色の凡例（ホームのドーナツと対応関係を明確にする） ---- */
+  function renderRecordsLegend(){
+    const el = document.getElementById('recordsLegend');
+    const cats = legendCategories();
+    if(cats.length === 0){ el.innerHTML = ''; return; }
+    el.innerHTML = cats.map(function(cat){
+      return '<span class="legend-chip" onclick="toast(\'' + jsAttrEscape(cat) + '\')">' +
+        '<span class="dot" style="background:' + categoryColor(cat) + '"></span>' + escapeHtml(cat) + '</span>';
+    }).join('');
+  }
+
+  function populateSelectOptions(selectEl, list, placeholder){
+    let html = '';
+    if(placeholder !== undefined) html += '<option value="">' + escapeHtml(placeholder) + '</option>';
+    html += findActive(list).map(function(item){
+      return '<option value="' + item.id + '">' + escapeHtml(item.name) + '</option>';
+    }).join('');
+    selectEl.innerHTML = html;
+  }
+
+  window.openRecordModal = function(recordId){
+    state.editingRecordId = recordId;
+    document.getElementById('recordError').textContent = '';
+    populateSelectOptions(document.getElementById('rPark'), MASTER_PARKS);
+    populateSelectOptions(document.getElementById('rPassType'), MASTER_PASSTYPES);
+    populateSelectOptions(document.getElementById('rShow'), MASTER_SHOWS, 'なし');
+
+    if(recordId){
+      const r = findById(userRecords(), recordId);
+      document.getElementById('recordModalTitle').textContent = '記録を編集';
+      document.getElementById('rDate').value = r.date;
+      document.getElementById('rPark').value = r.parkId;
+      document.getElementById('rPassType').value = r.passTypeId;
+      document.getElementById('rAmount').value = r.amount ? r.amount : '';
+      document.getElementById('rShow').value = r.showId || '';
+      document.getElementById('rSeat').value = r.seatPosition || '';
+      document.getElementById('recordDeleteRow').style.display = '';
+      document.getElementById('recordImageRow').style.display = '';
+    } else {
+      document.getElementById('recordModalTitle').textContent = '記録を追加';
+      document.getElementById('rDate').value = '';
+      document.getElementById('rPark').value = '';
+      document.getElementById('rPassType').value = '';
+      document.getElementById('rAmount').value = '';
+      document.getElementById('rShow').value = '';
+      document.getElementById('rSeat').value = '';
+      document.getElementById('recordDeleteRow').style.display = 'none';
+      document.getElementById('recordImageRow').style.display = 'none';
+    }
+    onShowSelectChange();
+    document.getElementById('recordModal').classList.add('active');
+  };
+  window.closeRecordModal = function(){ document.getElementById('recordModal').classList.remove('active'); };
+
+  window.onShowSelectChange = function(){
+    const hasShow = !!document.getElementById('rShow').value;
+    const seatField = document.getElementById('rSeatField');
+    seatField.classList.toggle('hidden', !hasShow);
+    if(!hasShow) document.getElementById('rSeat').value = '';
+  };
+
+  window.submitRecordForm = async function(){
+    const errEl = document.getElementById('recordError');
+    const date = document.getElementById('rDate').value;
+    const parkId = document.getElementById('rPark').value;
+    const passTypeId = document.getElementById('rPassType').value;
+    const amountRaw = document.getElementById('rAmount').value;
+    const showId = document.getElementById('rShow').value || null;
+    const seatPosition = document.getElementById('rSeat').value.trim() || null;
+
+    if(!date){ errEl.textContent = '日付を入力してください'; return; }
+    if(!parkId){ errEl.textContent = 'パークを選択してください'; return; }
+    if(!passTypeId){ errEl.textContent = 'パスポート種別を選択してください'; return; }
+    errEl.textContent = '';
+
+    const amount = amountRaw === '' ? 0 : Number(amountRaw);
+    const item = { date:date, parkId:parkId, passTypeId:passTypeId, amount:amount, showId:showId, seatPosition: showId ? seatPosition : null };
+
+    // 同一日付の重複記録チェック（編集時は編集対象自身を比較対象から除外する）。ブロックはしない＝
+    // 確認ダイアログで「追加する/保存する」を選べば続行できる（既存の削除確認(赤)とは別の警告トーン）。
+    const isDup = userRecords().some(function(r){ return r.date === date && r.id !== state.editingRecordId; });
+    if(isDup){
+      const actionLabel = state.editingRecordId ? '保存' : '追加';
+      showWarnConfirm(
+        'この日付（' + formatDateJp(date) + '）には既に記録があります。このまま' + actionLabel + 'しますか？',
+        function(){ saveRecordItem(item, date); },
+        actionLabel + 'する'
+      );
+      return;
+    }
+    await saveRecordItem(item, date);
+  };
+
+  async function saveRecordItem(item, date){
+    const errEl = document.getElementById('recordError');
+    let res;
+    if(state.editingRecordId){
+      item.id = state.editingRecordId;
+      res = await apiPost('Records', 'update', { userId: state.currentUser.id, item:item });
+    } else {
+      res = await apiPost('Records', 'create', { userId: state.currentUser.id, item:item });
+    }
+    if(!res.ok){ errEl.textContent = res.error || '保存に失敗しました'; return; }
+
+    closeRecordModal();
+    toast(state.editingRecordId ? '記録を更新しました' : '記録を追加しました');
+    state.recordsYear = new Date(date + 'T00:00:00').getFullYear();
+    await reloadRecords();
+    if(state.screen === 'records') refreshRecords();
+    if(state.screen === 'home') refreshHome();
+  }
+
+  window.deleteCurrentRecord = function(){
+    const id = state.editingRecordId;
+    if(!id) return;
+    showConfirm('この記録を削除しますか？この操作は取り消せません。', async function(){
+      const res = await apiPost('Records', 'delete', { userId: state.currentUser.id, id:id });
+      if(!res.ok){ toast(res.error || '削除に失敗しました'); return; }
+      closeRecordModal();
+      toast('記録を削除しました');
+      await reloadRecords();
+      if(state.screen === 'records') refreshRecords();
+      if(state.screen === 'home') refreshHome();
+    }, '削除する');
+  };
+
+  /* ============================================================
+   * 7. 集計画面
+   * ============================================================ */
+  function refreshSummary(){
+    const sel = document.getElementById('summaryYearSelect');
+    const years = yearsWithData();
+    sel.innerHTML = '<option value="all">すべての年</option>' +
+      years.slice().reverse().map(function(y){ return '<option value="' + y + '">' + y + '年</option>'; }).join('');
+    sel.value = state.summaryYearFilter;
+
+    // 年別推移（イン数・金額）
+    const countPoints = years.map(function(y){ return { label:y+'年', value: recordsOfYear(y).length, year:y }; });
+    const moneyPoints = years.map(function(y){
+      const sum = recordsOfYear(y).reduce(function(acc,r){ return acc + (r.amount || 0); }, 0);
+      return { label:y+'年', value: sum, year:y };
+    });
+    renderYearBarChart(document.getElementById('summaryCountChart'), countPoints, 'var(--brand)', function(v){ return v + 'イン'; });
+    renderYearBarChart(document.getElementById('summaryMoneyChart'), moneyPoints, 'var(--c1)', function(v){ return v.toLocaleString('ja-JP') + '円'; });
+
+    // パーク別内訳の詳細
+    const scopeRecords = state.summaryYearFilter === 'all' ? userRecords() : recordsOfYear(Number(state.summaryYearFilter));
+    document.getElementById('summaryParkScopeLabel').textContent = state.summaryYearFilter === 'all' ? '全期間の合計' : state.summaryYearFilter + '年の合計';
+    renderParkBreakdown(document.getElementById('summaryParkBreakdown'), scopeRecords);
+  }
+
+  window.onSummaryYearChange = function(){
+    state.summaryYearFilter = document.getElementById('summaryYearSelect').value;
+    refreshSummary();
+  };
+
+  function renderYearBarChart(container, points, color, formatter){
+    if(points.length === 0 || points.every(function(p){ return p.value === 0; })){
+      container.innerHTML = '<div class="empty-hint" style="padding:16px 0;">データがありません</div>';
+      return;
+    }
+    const max = Math.max.apply(null, points.map(function(p){ return p.value; }).concat([1]));
+    container.innerHTML = points.map(function(p){
+      const heightPct = Math.max((p.value / max) * 100, p.value > 0 ? 6 : 2);
+      const selected = state.summaryYearFilter !== 'all' && Number(state.summaryYearFilter) === p.year;
+      const opacity = (state.summaryYearFilter === 'all' || selected) ? '1' : '0.4';
+      return '<div class="yearbar-col" onclick="toast(\'' + escapeHtml(p.label) + '：' + escapeHtml(formatter(p.value)) + '\')">' +
+        '<div class="yearbar-value">' + formatter(p.value) + '</div>' +
+        '<div class="yearbar-bar" style="height:' + heightPct + '%; background:' + color + '; opacity:' + opacity + ';"></div>' +
+        '<div class="yearbar-label' + (selected ? ' on' : '') + '">' + escapeHtml(p.label) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderParkBreakdown(container, records){
+    if(records.length === 0){
+      container.innerHTML = '<div class="empty-hint" style="padding:16px 0;">データがありません</div>';
+      return;
+    }
+    const byPark = {};
+    records.forEach(function(r){
+      if(!byPark[r.parkId]) byPark[r.parkId] = { count:0, amount:0 };
+      byPark[r.parkId].count += 1;
+      byPark[r.parkId].amount += (r.amount || 0);
+    });
+    const rows = Object.keys(byPark).map(function(pid){
+      return { id:pid, name:parkName(pid), color:parkColor(pid), count:byPark[pid].count, amount:byPark[pid].amount };
+    }).sort(function(a,b){ return b.count - a.count; });
+    const maxCount = Math.max.apply(null, rows.map(function(r){ return r.count; }));
+
+    container.innerHTML = rows.map(function(r){
+      const widthPct = Math.max((r.count / maxCount) * 100, 8);
+      return '<div class="parkbar-row">' +
+        '<div class="parkbar-head"><span class="name">' + escapeHtml(r.name) + '</span><span class="meta">' + r.count + 'イン ・ ' + r.amount.toLocaleString('ja-JP') + '円</span></div>' +
+        '<div class="parkbar-track"><div class="parkbar-fill" style="width:' + widthPct + '%; background:' + r.color + ';" onclick="toast(\'' + jsAttrEscape(r.name) + '：' + r.count + 'イン\')"></div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ============================================================
+   * 8. 設定画面（マスタ管理は管理者のみ）
+   * ============================================================ */
+  function refreshSettings(){
+    const u = state.currentUser;
+    if(!u) return;
+    document.getElementById('settingsAvatar').textContent = u.name.slice(0,1);
+    document.getElementById('settingsUserName').textContent = u.name;
+    const roleBadge = document.getElementById('settingsRoleBadge');
+    roleBadge.textContent = u.role === 'admin' ? '管理者' : '一般ユーザー';
+    roleBadge.className = 'role-badge ' + (u.role === 'admin' ? 'admin' : 'general');
+
+    const isAdmin = u.role === 'admin';
+    document.getElementById('masterAdminBlock').style.display = isAdmin ? '' : 'none';
+    document.getElementById('masterGeneralBlock').style.display = isAdmin ? 'none' : '';
+    if(isAdmin){
+      renderMasterTabs();
+      renderMasterList();
+    }
+  }
+
+  function renderMasterTabs(){
+    const tabsEl = document.getElementById('masterTabs');
+    tabsEl.innerHTML = Object.keys(MASTER_LABELS).map(function(key){
+      return '<button class="tab-btn' + (state.masterTab === key ? ' on' : '') + '" onclick="setMasterTab(\'' + key + '\')">' + escapeHtml(MASTER_LABELS[key]) + '</button>';
+    }).join('');
+  }
+  window.setMasterTab = function(key){
+    state.masterTab = key;
+    renderMasterTabs();
+    renderMasterList();
+  };
+
+  // 一覧は常にsortOrder昇順で描画する（▲▼による並べ替えの基準順もこれに一致させる）。
+  function sortedMasterList(){
+    return MASTER_MAP[state.masterTab]().slice().sort(function(a,b){ return (a.sortOrder||0) - (b.sortOrder||0); });
+  }
+
+  function renderMasterList(){
+    const list = sortedMasterList();
+    const listEl = document.getElementById('masterList');
+    if(list.length === 0){
+      listEl.innerHTML = '<div class="empty-hint">項目がありません</div>';
+      return;
+    }
+    listEl.innerHTML = list.map(function(item, idx){
+      const statusBadge = item.isActive
+        ? '<span class="badge-status active">有効</span>'
+        : '<span class="badge-status inactive">無効</span>';
+      const toggleLabel = item.isActive ? '無効にする' : '有効にする';
+      const upDisabled = idx === 0 ? ' disabled' : '';
+      const downDisabled = idx === list.length - 1 ? ' disabled' : '';
+      return '<div class="master-item">' +
+        '<div class="master-item-main">' +
+          '<div class="reorder-btns">' +
+            '<button class="reorder-btn" aria-label="上へ" onclick="moveMasterItem(\'' + item.id + '\',-1)"' + upDisabled + '>▲</button>' +
+            '<button class="reorder-btn" aria-label="下へ" onclick="moveMasterItem(\'' + item.id + '\',1)"' + downDisabled + '>▼</button>' +
+          '</div>' +
+          '<div class="master-item-text">' +
+            '<span class="name' + (item.isActive ? '' : ' inactive') + '">' + escapeHtml(item.name) + '</span>' +
+            statusBadge +
+          '</div>' +
+        '</div>' +
+        '<div class="master-item-actions">' +
+          '<button class="mini-btn" onclick="openMasterItemModal(\'' + item.id + '\')">編集</button>' +
+          '<button class="mini-btn' + (item.isActive ? ' danger-text' : '') + '" onclick="toggleMasterItemActive(\'' + item.id + '\')">' + toggleLabel + '</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // 隣接項目とsortOrderを交換して並び順を変更する。見た目はローカルの配列操作で即時反映し
+  // （楽観的更新）、その後サーバーへ永続化する。サーバー側が拒否した場合は交換をもう一度
+  // 適用して元の状態にロールバックする（入れ替えは2回適用すると元に戻る）。
+  window.moveMasterItem = async function(itemId, dir){
+    const list = sortedMasterList();
+    const idx = list.findIndex(function(x){ return x.id === itemId; });
+    const targetIdx = idx + dir;
+    if(idx === -1 || targetIdx < 0 || targetIdx >= list.length) return;
+    const a = list[idx], b = list[targetIdx];
+    function swap(){
+      const tmp = a.sortOrder;
+      a.sortOrder = b.sortOrder;
+      b.sortOrder = tmp;
+    }
+    swap();
+    renderMasterList();
+    const actionSuffix = MASTER_ACTION_SUFFIX[state.masterTab];
+    const res = await apiPost('Masters', 'reorder' + actionSuffix, { userId: state.currentUser.id, id:itemId, direction: dir < 0 ? 'up' : 'down' });
+    if(!res.ok){
+      swap();
+      renderMasterList();
+      toast(res.error || '並べ替えに失敗しました');
+    }
+  };
+
+  window.openMasterItemModal = function(itemId){
+    state.editingMasterId = itemId;
+    document.getElementById('masterItemError').textContent = '';
+    const list = MASTER_MAP[state.masterTab]();
+    const label = MASTER_LABELS[state.masterTab];
+    const isParks = state.masterTab === 'parks';
+    document.getElementById('masterItemCategoryField').classList.toggle('hidden', !isParks);
+    if(itemId){
+      const item = findById(list, itemId);
+      document.getElementById('masterItemModalTitle').textContent = label + 'を編集';
+      document.getElementById('masterItemName').value = item.name;
+      document.getElementById('masterItemCategory').value = isParks ? (item.category || '') : '';
+    } else {
+      document.getElementById('masterItemModalTitle').textContent = label + 'を追加';
+      document.getElementById('masterItemName').value = '';
+      document.getElementById('masterItemCategory').value = '';
+    }
+    document.getElementById('masterItemModal').classList.add('active');
+  };
+  window.closeMasterItemModal = function(){ document.getElementById('masterItemModal').classList.remove('active'); };
+
+  window.submitMasterItemForm = async function(){
+    const errEl = document.getElementById('masterItemError');
+    const name = document.getElementById('masterItemName').value.trim();
+    if(!name){ errEl.textContent = '名称を入力してください'; return; }
+    const actionSuffix = MASTER_ACTION_SUFFIX[state.masterTab];
+    const item = { name:name };
+    if(state.masterTab === 'parks') item.category = document.getElementById('masterItemCategory').value.trim();
+    let res;
+    if(state.editingMasterId){
+      item.id = state.editingMasterId;
+      res = await apiPost('Masters', 'update' + actionSuffix, { userId: state.currentUser.id, item:item });
+    } else {
+      res = await apiPost('Masters', 'create' + actionSuffix, { userId: state.currentUser.id, item:item });
+    }
+    if(!res.ok){ errEl.textContent = res.error || '保存に失敗しました'; return; }
+    errEl.textContent = '';
+    toast(state.editingMasterId ? '更新しました' : '追加しました');
+    closeMasterItemModal();
+    await reloadMasters();
+    renderMasterList();
+  };
+
+  window.toggleMasterItemActive = async function(itemId){
+    const list = MASTER_MAP[state.masterTab]();
+    const item = findById(list, itemId);
+    const actionSuffix = MASTER_ACTION_SUFFIX[state.masterTab];
+    if(item.isActive){
+      showConfirm('「' + item.name + '」を無効化しますか？無効化した項目は記録の新規登録時に選べなくなります（既存の記録には影響しません）。', async function(){
+        const res = await apiPost('Masters', 'delete' + actionSuffix, { userId: state.currentUser.id, id:itemId });
+        if(!res.ok){ toast(res.error || '処理に失敗しました'); return; }
+        await reloadMasters();
+        renderMasterList();
+        // どの記録からも参照されていなかった項目はサーバー側で物理削除されるため、その旨を案内する
+        toast(res.data && res.data.physicallyDeleted ? '削除しました' : '無効にしました');
+      }, '無効にする');
+    } else {
+      const res = await apiPost('Masters', 'update' + actionSuffix, { userId: state.currentUser.id, item:{ id:itemId, isActive:true } });
+      if(!res.ok){ toast(res.error || '処理に失敗しました'); return; }
+      await reloadMasters();
+      renderMasterList();
+      toast('有効にしました');
+    }
+  };
+
+  /* ============================================================
+   * 9. 画像生成（単発記録カード・年間まとめ）
+   * ============================================================
+   * 本アプリは写真等の外部画像を扱わないため、花火大会管理アプリのストーリー画像合成と異なり
+   * tainted canvas問題は発生しない（テキスト・図形のみのcanvas描画）。配色はcategoryColor()/
+   * parkColor()の安定配色ロジックをそのまま流用し、ブランドカラー（コーラルピンク・ラベンダー・
+   * ゴールド）を踏襲したデザインにする。
+   */
+  const FONT_STACK = '"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif';
+
+  function drawRoundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+  function truncateToWidth(ctx, text, maxWidth){
+    if(ctx.measureText(text).width <= maxWidth) return text;
+    let t = text;
+    while(t.length > 1 && ctx.measureText(t+'…').width > maxWidth){ t = t.slice(0, -1); }
+    return t + '…';
+  }
+  // アプリのロゴ（ログイン画面のauth-logoと同じ星形パス）をcanvas上にも再現し、ブランドの一貫性を出す。
+  const APP_STAR_PATH = 'M12 1.5l2.6 6.9 7.4.5-5.7 4.8 1.9 7.2L12 16.9 5.8 20.9l1.9-7.2L2 8.9l7.4-.5z';
+  function drawAppStar(ctx, cx, cy, scale, color){
+    const path = new Path2D(APP_STAR_PATH);
+    ctx.save();
+    ctx.translate(cx - 12*scale, cy - 12*scale);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = color;
+    ctx.fill(path);
+    ctx.restore();
+  }
+  function drawBrandHeaderFooter(ctx, W, H, headerLabel){
+    // 背景：ブランドのコーラルピンク→ラベンダーへのグラデーション（ホーム画面のstat-heroと同系）
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#ff6f91');
+    grad.addColorStop(0.32, '#ffa6bd');
+    grad.addColorStop(0.42, '#f7f5fb');
+    grad.addColorStop(1, '#f7f5fb');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    drawAppStar(ctx, 70, 108, 2.2, '#ffffff');
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 34px ' + FONT_STACK;
+    ctx.textBaseline = 'middle';
+    ctx.fillText('いんぱ手帳', 104, 110);
+    if(headerLabel){
+      ctx.font = '600 26px ' + FONT_STACK;
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fillText(headerLabel, 104, 150);
+    }
+
+    // フッター：ブランド名を薄く
+    ctx.textBaseline = 'alphabetic';
+    drawAppStar(ctx, W/2 - 86, H - 56, 1.3, '#d8cfe4');
+    ctx.font = '600 26px ' + FONT_STACK;
+    ctx.fillStyle = '#9b8fae';
+    ctx.textAlign = 'left';
+    ctx.fillText('いんぱ手帳', W/2 - 56, H - 48);
+    ctx.textAlign = 'left';
+  }
+
+  /** 単発記録カード：1080x1920。日付／パーク名／パスポート種別／当選ショー・座席位置（あれば）をまとめる。 */
+  function composeRecordCardImage(r){
+    const W = 1080, H = 1920;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    drawBrandHeaderFooter(ctx, W, H, '入園記録');
+
+    const cat = parkCategory(r.parkId);
+    const catColor = categoryColor(cat);
+    const cardX = 90, cardY = 420, cardW = W - 180, cardH = 1060, pad = 72;
+    ctx.save();
+    ctx.shadowColor = 'rgba(36,28,51,0.18)';
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetY = 18;
+    drawRoundRect(ctx, cardX, cardY, cardW, cardH, 40);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
+
+    let y = cardY + pad + 10;
+    // 分類ドット＋カテゴリ名
+    ctx.beginPath();
+    ctx.arc(cardX + pad + 10, y, 12, 0, Math.PI*2);
+    ctx.fillStyle = catColor;
+    ctx.fill();
+    ctx.font = '700 30px ' + FONT_STACK;
+    ctx.fillStyle = '#5c536b';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(cat, cardX + pad + 34, y + 1);
+    y += 70;
+
+    // 日付
+    ctx.font = '600 42px ' + FONT_STACK;
+    ctx.fillStyle = '#948b9f';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(formatDateJp(r.date) + '（' + ['日','月','火','水','木','金','土'][new Date(r.date+'T00:00:00').getDay()] + '）', cardX + pad, y + 40);
+    y += 100;
+
+    // パーク名（大きく、収まらなければ縮小）
+    const parkText = parkName(r.parkId);
+    let parkSize = 78;
+    ctx.font = '800 ' + parkSize + 'px ' + FONT_STACK;
+    while(ctx.measureText(parkText).width > cardW - pad*2 && parkSize > 44){
+      parkSize -= 4;
+      ctx.font = '800 ' + parkSize + 'px ' + FONT_STACK;
+    }
+    ctx.fillStyle = '#241c33';
+    ctx.fillText(truncateToWidth(ctx, parkText, cardW - pad*2), cardX + pad, y + parkSize*0.78);
+    y += parkSize + 56;
+
+    // パスポート種別ピル
+    const passText = passTypeName(r.passTypeId);
+    ctx.font = '700 32px ' + FONT_STACK;
+    const passW = ctx.measureText(passText).width + 56;
+    drawRoundRect(ctx, cardX + pad, y, passW, 64, 32);
+    ctx.fillStyle = '#ffe1ea';
+    ctx.fill();
+    ctx.fillStyle = '#ff6f91';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(passText, cardX + pad + 28, y + 33);
+    y += 64 + 44;
+    ctx.textBaseline = 'alphabetic';
+
+    // 当選ショー・座席位置
+    if(r.showId){
+      const showText = '当選：' + showName(r.showId);
+      ctx.font = '700 34px ' + FONT_STACK;
+      const showW = Math.min(cardW - pad*2, ctx.measureText(showText).width + 56);
+      drawRoundRect(ctx, cardX + pad, y, showW, 70, 35);
+      ctx.fillStyle = '#f5a623';
+      ctx.fill();
+      ctx.fillStyle = '#3a2600';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(truncateToWidth(ctx, showText, showW - 56), cardX + pad + 28, y + 36);
+      ctx.textBaseline = 'alphabetic';
+      y += 70 + 36;
+      if(r.seatPosition){
+        ctx.font = '500 32px ' + FONT_STACK;
+        ctx.fillStyle = '#5c536b';
+        ctx.fillText('座席：' + truncateToWidth(ctx, r.seatPosition, cardW - pad*2 - 140), cardX + pad, y);
+        y += 56;
+      }
+    }
+
+    // 金額
+    if(r.amount){
+      const bottomY = cardY + cardH - pad;
+      ctx.font = '500 30px ' + FONT_STACK;
+      ctx.fillStyle = '#948b9f';
+      ctx.fillText('金額', cardX + pad, bottomY - 56);
+      ctx.font = '800 56px ' + FONT_STACK;
+      ctx.fillStyle = '#241c33';
+      ctx.fillText(Number(r.amount).toLocaleString('ja-JP') + '円', cardX + pad, bottomY);
+    }
+
+    return canvas;
+  }
+
+  /** 年間まとめ画像：1080x1920。選択中の年の合計イン数・カテゴリ別内訳（件数・割合）・金額合計。 */
+  function composeYearSummaryImage(year){
+    const W = 1080, H = 1920;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    drawBrandHeaderFooter(ctx, W, H, year + '年 いんぱ年間まとめ');
+
+    const records = recordsOfYear(year);
+    const total = records.length;
+    const totalAmount = records.reduce(function(acc, r){ return acc + (r.amount||0); }, 0);
+    const byCategory = {};
+    records.forEach(function(r){
+      const cat = parkCategory(r.parkId);
+      byCategory[cat] = (byCategory[cat] || 0) + 1;
+    });
+    const segments = Object.keys(byCategory).map(function(cat){
+      return { name: cat, value: byCategory[cat], color: categoryColor(cat) };
+    }).sort(function(a,b){ return b.value - a.value; });
+
+    const cardX = 90, cardY = 420, cardW = W - 180, pad = 72;
+
+    // ヒーロー数値（合計イン数）
+    ctx.textAlign = 'center';
+    ctx.font = '600 36px ' + FONT_STACK;
+    ctx.fillStyle = '#5c536b';
+    ctx.fillText('合計イン数', W/2, cardY + 20);
+    ctx.font = '800 220px ' + FONT_STACK;
+    ctx.fillStyle = '#ff6f91';
+    ctx.fillText(String(total), W/2, cardY + 230);
+    ctx.font = '700 44px ' + FONT_STACK;
+    ctx.fillStyle = '#241c33';
+    ctx.fillText('イン', W/2, cardY + 290);
+    ctx.textAlign = 'left';
+
+    // カテゴリ別内訳（細いバー、角丸、ラベル直書き。dataviz方針: 1指標・カテゴリカル配色・凡例代わりの直接ラベル）
+    let y = cardY + 400;
+    ctx.font = '700 32px ' + FONT_STACK;
+    ctx.fillStyle = '#241c33';
+    ctx.fillText('カテゴリ別内訳', cardX, y);
+    y += 56;
+    const maxVal = Math.max.apply(null, segments.map(function(s){ return s.value; }).concat([1]));
+    const barMaxW = cardW - 320;
+    segments.forEach(function(seg){
+      const pct = total > 0 ? Math.round((seg.value/total)*100) : 0;
+      ctx.beginPath();
+      ctx.arc(cardX + 14, y + 14, 12, 0, Math.PI*2);
+      ctx.fillStyle = seg.color;
+      ctx.fill();
+      ctx.font = '600 34px ' + FONT_STACK;
+      ctx.fillStyle = '#241c33';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(seg.name, cardX + 44, y + 15);
+
+      const barW = Math.max((seg.value/maxVal) * barMaxW, 10);
+      drawRoundRect(ctx, cardX, y + 42, barMaxW, 22, 11);
+      ctx.fillStyle = '#e6e1ef';
+      ctx.fill();
+      drawRoundRect(ctx, cardX, y + 42, barW, 22, 11);
+      ctx.fillStyle = seg.color;
+      ctx.fill();
+
+      ctx.font = '600 30px ' + FONT_STACK;
+      ctx.fillStyle = '#5c536b';
+      ctx.textAlign = 'right';
+      ctx.fillText(seg.value + 'イン（' + pct + '%）', cardX + cardW, y + 15);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      y += 110;
+    });
+
+    // 金額合計
+    y += 24;
+    drawRoundRect(ctx, cardX, y, cardW, 150, 28);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.font = '600 32px ' + FONT_STACK;
+    ctx.fillStyle = '#948b9f';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('合計金額', cardX + 44, y + 54);
+    ctx.font = '800 58px ' + FONT_STACK;
+    ctx.fillStyle = '#241c33';
+    ctx.fillText(totalAmount.toLocaleString('ja-JP') + '円', cardX + 44, y + 108);
+    ctx.textBaseline = 'alphabetic';
+
+    return canvas;
+  }
+
+  function openOutputModal(canvas, filename){
+    const outCanvas = document.getElementById('outputCanvas');
+    outCanvas.width = canvas.width; outCanvas.height = canvas.height;
+    outCanvas.getContext('2d').drawImage(canvas, 0, 0);
+    canvas.toBlob(function(blob){
+      const url = URL.createObjectURL(blob);
+      const a = document.getElementById('outputDownloadBtn');
+      a.href = url; a.download = filename;
+    }, 'image/png');
+    document.getElementById('outputModal').classList.add('active');
+  }
+  window.closeOutputModal = function(){ document.getElementById('outputModal').classList.remove('active'); };
+
+  window.generateRecordCardImage = function(recordId){
+    const id = recordId || state.editingRecordId;
+    const r = findById(userRecords(), id);
+    if(!r){ toast('記録が見つかりませんでした'); return; }
+    const canvas = composeRecordCardImage(r);
+    openOutputModal(canvas, parkName(r.parkId) + '_' + r.date + '.png');
+  };
+
+  window.generateYearSummaryImage = function(){
+    if(state.summaryYearFilter === 'all'){
+      toast('年を選択してから作成してください');
+      return;
+    }
+    const year = Number(state.summaryYearFilter);
+    if(recordsOfYear(year).length === 0){ toast(year + '年の記録がありません'); return; }
+    const canvas = composeYearSummaryImage(year);
+    openOutputModal(canvas, year + '_inpa_summary.png');
+  };
+
+  /* ============================================================
+   * 10. 汎用確認モーダル
+   * ============================================================ */
+  function showConfirm(message, onYes, yesLabel){
+    document.getElementById('confirmModalMessage').textContent = message;
+    document.getElementById('confirmModalYesBtn').textContent = yesLabel || '実行する';
+    state.confirmCallback = onYes;
+    document.getElementById('confirmModal').classList.add('active');
+  }
+  window.closeConfirmModal = function(){
+    document.getElementById('confirmModal').classList.remove('active');
+    state.confirmCallback = null;
+  };
+  window.confirmModalYes = function(){
+    const cb = state.confirmCallback;
+    document.getElementById('confirmModal').classList.remove('active');
+    state.confirmCallback = null;
+    if(cb) cb();
+  };
+
+  // 注意喚起ダイアログ（アンバー系）。削除確認（赤・不可逆操作の最終確認）とは明確にトーンを分け、
+  // ブロックはしない操作（同一日付の重複記録など）の「このまま続行しますか？」確認に使う。
+  function showWarnConfirm(message, onYes, yesLabel){
+    document.getElementById('warnModalMessage').textContent = message;
+    document.getElementById('warnModalYesBtn').textContent = yesLabel || '続行する';
+    state.warnCallback = onYes;
+    document.getElementById('warnModal').classList.add('active');
+  }
+  window.closeWarnModal = function(){
+    document.getElementById('warnModal').classList.remove('active');
+    state.warnCallback = null;
+  };
+  window.warnModalYes = function(){
+    const cb = state.warnCallback;
+    document.getElementById('warnModal').classList.remove('active');
+    state.warnCallback = null;
+    if(cb) cb();
+  };
+
+  /* ============================================================
+   * 11. 初期化
+   * ============================================================ */
+  document.addEventListener('DOMContentLoaded', async function(){
+    await loadLoginUsers();
+    const session = loadSession();
+    if(session && session.id){
+      state.currentUser = session;
+      state.recordsYear = CURRENT_YEAR;
+      await loadAppData();
+      navigate('home');
+    } else {
+      navigate('login');
+    }
+  });
+</script>
+</body>
+</html>
