@@ -334,9 +334,19 @@
   /* ==== 画像出力プレビュー ==== */
   .output-preview{
     background:var(--surface-0); border-radius:12px; overflow:hidden; margin-bottom:14px;
-    max-height:60vh; display:flex; justify-content:center;
+    display:flex; justify-content:center; align-items:center; padding:10px;
   }
-  .output-preview canvas{width:100%; height:auto; display:block;}
+  /* 9:16の縦長キャンバスを、縦横比を保ったまま画面に収まる大きさで表示する */
+  .output-preview canvas{width:auto; height:auto; max-width:100%; max-height:54vh; display:block; border-radius:8px; box-shadow:0 4px 16px rgba(20,10,25,0.18);}
+  .output-bg-row{display:flex; gap:10px; margin-bottom:6px;}
+  .output-bg-row .btn{font-size:14px; padding:12px 10px; min-height:46px;}
+  label.btn{cursor:pointer; position:relative;}
+  .output-bg-input{position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none;}
+  .modal .output-bg-note{font-size:11.5px; color:var(--text-muted); margin:4px 2px 12px; line-height:1.5;}
+  .btn.is-pending{opacity:0.5; pointer-events:none;}
+  .modal .field-hint{font-size:11.5px; color:var(--text-muted); margin:6px 2px 0; line-height:1.5;}
+  .master-item .name-en{flex-basis:100%; font-size:12px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:-4px;}
+  .master-item .name-en.unset{font-style:italic; opacity:0.8;}
 
   .toast{
     position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
@@ -622,6 +632,11 @@
         <option value="その他">
       </datalist>
     </div>
+    <div class="field hidden" id="masterItemNameEnField">
+      <label>英語名（任意）</label>
+      <input type="text" id="masterItemNameEn" placeholder="例）Tokyo Disneyland" autocomplete="off" autocapitalize="words" spellcheck="false">
+      <p class="field-hint">ストーリー画像に表示されます。空欄のときは日本語の名称を使います。</p>
+    </div>
     <p class="error-text" id="masterItemError"></p>
     <div class="modal-actions">
       <button class="btn ghost" onclick="closeMasterItemModal()">キャンセル</button>
@@ -661,7 +676,16 @@
 <div class="modal-overlay" id="outputModal">
   <div class="modal">
     <h2>画像を出力</h2>
-    <div class="output-preview"><canvas id="outputCanvas"></canvas></div>
+    <div class="output-preview"><canvas id="outputCanvas" width="1080" height="1920"></canvas></div>
+    <div class="output-bg-row">
+      <label class="btn ghost btn-icon" id="outputBgPickBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <span id="outputBgPickLabel">背景画像を選ぶ</span>
+        <input type="file" accept="image/*" id="outputBgInput" class="output-bg-input" onchange="onOutputBgSelected(this)">
+      </label>
+      <button class="btn ghost" id="outputBgClearBtn" style="display:none;" onclick="clearOutputBg()">標準背景に戻す</button>
+    </div>
+    <p class="output-bg-note">選んだ画像は端末内で使うだけで、保存・送信はしません。</p>
     <div class="modal-actions">
       <button class="btn ghost" onclick="closeOutputModal()">閉じる</button>
       <a class="btn primary" id="outputDownloadBtn" style="text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center;">ダウンロード</a>
@@ -1430,6 +1454,14 @@
       const toggleLabel = item.isActive ? '無効にする' : '有効にする';
       const upDisabled = idx === 0 ? ' disabled' : '';
       const downDisabled = idx === list.length - 1 ? ' disabled' : '';
+      // パークのみ英語名（ストーリー画像用）を名称の下に小さく添える。未設定なら気付けるよう薄く案内する。
+      let nameEnHtml = '';
+      if(state.masterTab === 'parks'){
+        const en = String(item.nameEn || '').trim();
+        nameEnHtml = en
+          ? '<span class="name-en">' + escapeHtml(en) + '</span>'
+          : '<span class="name-en unset">英語名 未設定</span>';
+      }
       return '<div class="master-item">' +
         '<div class="master-item-main">' +
           '<div class="reorder-btns">' +
@@ -1439,6 +1471,7 @@
           '<div class="master-item-text">' +
             '<span class="name' + (item.isActive ? '' : ' inactive') + '">' + escapeHtml(item.name) + '</span>' +
             statusBadge +
+            nameEnHtml +
           '</div>' +
         '</div>' +
         '<div class="master-item-actions">' +
@@ -1481,15 +1514,18 @@
     const label = MASTER_LABELS[state.masterTab];
     const isParks = state.masterTab === 'parks';
     document.getElementById('masterItemCategoryField').classList.toggle('hidden', !isParks);
+    document.getElementById('masterItemNameEnField').classList.toggle('hidden', !isParks);
     if(itemId){
       const item = findById(list, itemId);
       document.getElementById('masterItemModalTitle').textContent = label + 'を編集';
       document.getElementById('masterItemName').value = item.name;
       document.getElementById('masterItemCategory').value = isParks ? (item.category || '') : '';
+      document.getElementById('masterItemNameEn').value = isParks ? (item.nameEn || '') : '';
     } else {
       document.getElementById('masterItemModalTitle').textContent = label + 'を追加';
       document.getElementById('masterItemName').value = '';
       document.getElementById('masterItemCategory').value = '';
+      document.getElementById('masterItemNameEn').value = '';
     }
     document.getElementById('masterItemModal').classList.add('active');
   };
@@ -1501,7 +1537,10 @@
     if(!name){ errEl.textContent = '名称を入力してください'; return; }
     const actionSuffix = MASTER_ACTION_SUFFIX[state.masterTab];
     const item = { name:name };
-    if(state.masterTab === 'parks') item.category = document.getElementById('masterItemCategory').value.trim();
+    if(state.masterTab === 'parks'){
+      item.category = document.getElementById('masterItemCategory').value.trim();
+      item.nameEn = document.getElementById('masterItemNameEn').value.trim();
+    }
     let res;
     if(state.editingMasterId){
       item.id = state.editingMasterId;
@@ -1540,278 +1579,555 @@
   };
 
   /* ============================================================
-   * 9. 画像生成（単発記録カード・年間まとめ）
+   * 9. 画像生成（単発記録カード・年間まとめ）— Instagramストーリー用 1080x1920
    * ============================================================
-   * 本アプリは写真等の外部画像を扱わないため、花火大会管理アプリのストーリー画像合成と異なり
-   * tainted canvas問題は発生しない（テキスト・図形のみのcanvas描画）。配色はcategoryColor()/
-   * parkColor()の安定配色ロジックをそのまま流用し、ブランドカラー（コーラルピンク・ラベンダー・
-   * ゴールド）を踏襲したデザインにする。
+   * 2026-11 デザイン刷新:
+   *  - アプリ名（いんぱ手帳）・金額は画像に載せない。パーク名は英語名（Parks.nameEn、空なら日本語名）。
+   *  - 背景は「標準背景（夜空風グラデーション）」または「ユーザーが選んだローカル画像」。
+   *    ローカル画像はFileReader相当（URL.createObjectURL）で読み込み、canvas上でcover方式に
+   *    9:16へトリミングするだけ。サーバー（Drive等）へは一切送信・保存しない。
+   *    ローカル画像のためtainted canvas問題は発生しない。
+   *  - Instagramストーリー上下のUI（上:プログレスバー・アカウント名／下:返信欄）に重ならないよう、
+   *    上下 STORY_SAFE px には重要な文字を置かない。
+   *  - 英数字は Cormorant Garamond（見出し・パーク名のセリフ体）と Jost（一覧・ラベルのサンセリフ）を
+   *    Google Fontsから遅延読み込みする。読み込めない環境ではシステムフォントにフォールバックする。
    */
-  const FONT_STACK = '"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif';
+  const SLASH2 = '/' + '/'; // GAS配信時の"//"削除不具合を避けるため、URLはこれで組み立てる
+  const STORY_W = 1080, STORY_H = 1920, STORY_SAFE = 250;
+  const IMG_SERIF = '"Cormorant Garamond","Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",Georgia,serif';
+  const IMG_SANS = '"Jost","Helvetica Neue",Arial,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif';
+  const IMG_TEXT = '#ffffff';
+  // 補助テキストの白の濃さ。写真背景は明るい部分が残りうるため、標準背景より不透明度を上げて可読性を確保する。
+  function imgSoft(photo){ return photo ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.72)'; }
+  function imgMuted(photo){ return photo ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.52)'; }
+  const IMG_ACCENT = '#ff8fab';  // ブランドのコーラルピンク（暗い背景上で映えるダークモード側の値）
+  const IMG_GOLD = '#f5c36b';    // 当選ショー用（アプリのゴールドを暗背景向けに少し明るく）
+  // カテゴリ色（categoryColor()が返す--c1〜--c8の番号）を、暗い背景・写真の上でも沈まない明るめの値に置き換える
+  const IMG_DOT_COLORS = ['#6aa8f5','#f5864f','#38cf97','#f5bd3a','#f297bb','#4cc35e','#aaa0f7','#f38181'];
+  const WEEKDAY_EN = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
-  function drawRoundRect(ctx, x, y, w, h, r){
-    ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.arcTo(x+w, y, x+w, y+h, r);
-    ctx.arcTo(x+w, y+h, x, y+h, r);
-    ctx.arcTo(x, y+h, x, y, r);
-    ctx.arcTo(x, y, x+w, y, r);
-    ctx.closePath();
+  let imageFontsPromise = null;
+  /** 画像用Webフォントを一度だけ読み込む。失敗・タイムアウト時もresolveし、システムフォントで描画を続行する。 */
+  function ensureImageFonts(){
+    if(imageFontsPromise) return imageFontsPromise;
+    imageFontsPromise = new Promise(function(resolve){
+      let done = false;
+      function finish(){ if(!done){ done = true; resolve(); } }
+      setTimeout(finish, 3500);
+      try{
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https:' + SLASH2 + 'fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@400;500;600&display=swap';
+        link.onload = function(){
+          if(!document.fonts || !document.fonts.load){ finish(); return; }
+          Promise.all([
+            document.fonts.load('600 100px "Cormorant Garamond"', '2026 Tokyo'),
+            document.fonts.load('500 100px "Cormorant Garamond"', '2026 Tokyo'),
+            document.fonts.load('italic 500 100px "Cormorant Garamond"', 'visits'),
+            document.fonts.load('400 40px "Jost"', '01.23 Tokyo'),
+            document.fonts.load('500 40px "Jost"', '01.23 Tokyo'),
+            document.fonts.load('600 40px "Jost"', 'SHOW')
+          ]).then(finish, finish);
+        };
+        link.onerror = finish;
+        document.head.appendChild(link);
+      }catch(e){ finish(); }
+    });
+    return imageFontsPromise;
+  }
+
+  function imageCategoryColor(cat){
+    const m = /--c(\d)/.exec(categoryColor(cat));
+    return IMG_DOT_COLORS[m ? Number(m[1]) - 1 : 0];
+  }
+  /** 画像用のパーク表示名：英語名（nameEn）を優先し、空なら日本語名で代用する。 */
+  function parkImageName(parkId){
+    const p = findById(MASTER_PARKS, parkId);
+    if(!p) return parkName(parkId);
+    const en = String(p.nameEn || '').trim();
+    return en || p.name;
+  }
+  function imgFont(ctx, weight, size, family, italic){
+    ctx.font = (italic ? 'italic ' : '') + weight + ' ' + size + 'px ' + family;
   }
   function truncateToWidth(ctx, text, maxWidth){
     if(ctx.measureText(text).width <= maxWidth) return text;
-    let t = text;
-    while(t.length > 1 && ctx.measureText(t+'…').width > maxWidth){ t = t.slice(0, -1); }
-    return t + '…';
+    let t = String(text);
+    while(t.length > 1 && ctx.measureText(t + '…').width > maxWidth){ t = t.slice(0, -1); }
+    return t.replace(/\s+$/, '') + '…';
   }
-  // アプリのロゴ（ログイン画面のauth-logoと同じ星形パス）をcanvas上にも再現し、ブランドの一貫性を出す。
-  const APP_STAR_PATH = 'M12 1.5l2.6 6.9 7.4.5-5.7 4.8 1.9 7.2L12 16.9 5.8 20.9l1.9-7.2L2 8.9l7.4-.5z';
-  function drawAppStar(ctx, cx, cy, scale, color){
-    const path = new Path2D(APP_STAR_PATH);
-    ctx.save();
-    ctx.translate(cx - 12*scale, cy - 12*scale);
-    ctx.scale(scale, scale);
-    ctx.fillStyle = color;
-    ctx.fill(path);
-    ctx.restore();
+  /** 字間を空けたテキスト（英字ラベル用）。canvasのletterSpacingは古いSafariで未対応のため1文字ずつ描く。 */
+  function spacedWidth(ctx, text, spacing){
+    let w = 0;
+    for(let i = 0; i < text.length; i++){ w += ctx.measureText(text[i]).width + (i < text.length - 1 ? spacing : 0); }
+    return w;
   }
-  function drawBrandHeaderFooter(ctx, W, H, headerLabel){
-    // 背景：ブランドのコーラルピンク→ラベンダーへのグラデーション（ホーム画面のstat-heroと同系）
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#ff6f91');
-    grad.addColorStop(0.32, '#ffa6bd');
-    grad.addColorStop(0.42, '#f7f5fb');
-    grad.addColorStop(1, '#f7f5fb');
-    ctx.fillStyle = grad;
+  function drawSpaced(ctx, text, x, y, spacing){
+    let cx = x;
+    for(let i = 0; i < text.length; i++){
+      ctx.fillText(text[i], cx, y);
+      cx += ctx.measureText(text[i]).width + spacing;
+    }
+    return cx - spacing;
+  }
+  /** 最大幅に収まるまでフォントサイズを下げる（minSizeで打ち止め、それでも入らなければ呼び出し側で省略）。 */
+  function fitSize(ctx, text, maxW, weight, size, minSize, family, italic){
+    let s = size;
+    imgFont(ctx, weight, s, family, italic);
+    while(s > minSize && ctx.measureText(text).width > maxW){
+      s -= 1;
+      imgFont(ctx, weight, s, family, italic);
+    }
+    return s;
+  }
+  /** 単語単位で折り返す（空白を含まない日本語名などは文字単位で折り返す）。 */
+  function wrapLines(ctx, text, maxW){
+    const hasSpace = /\s/.test(text);
+    const tokens = hasSpace ? text.split(/\s+/) : Array.from(text);
+    const joiner = hasSpace ? ' ' : '';
+    const lines = [];
+    let cur = '';
+    tokens.forEach(function(tok){
+      const next = cur ? cur + joiner + tok : tok;
+      if(cur && ctx.measureText(next).width > maxW){ lines.push(cur); cur = tok; }
+      else { cur = next; }
+    });
+    if(cur) lines.push(cur);
+    return lines;
+  }
+  function seededRandom(seed){
+    let s = seed % 2147483647; if(s <= 0) s += 2147483646;
+    return function(){ s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  }
+  function radialGlow(ctx, x, y, r, color){
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, STORY_W, STORY_H);
+  }
+
+  /** 標準背景：深い夜空のグラデーション＋コーラル／ラベンダーの柔らかな光＋控えめな星。 */
+  function drawStandardBackground(ctx, W, H){
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#171127');
+    g.addColorStop(0.5, '#261b3d');
+    g.addColorStop(1, '#3f2246');
+    ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
-
-    drawAppStar(ctx, 70, 108, 2.2, '#ffffff');
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '700 34px ' + FONT_STACK;
-    ctx.textBaseline = 'middle';
-    ctx.fillText('いんぱ手帳', 104, 110);
-    if(headerLabel){
-      ctx.font = '600 26px ' + FONT_STACK;
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
-      ctx.fillText(headerLabel, 104, 150);
-    }
-
-    // フッター：ブランド名を薄く
-    ctx.textBaseline = 'alphabetic';
-    drawAppStar(ctx, W/2 - 86, H - 56, 1.3, '#d8cfe4');
-    ctx.font = '600 26px ' + FONT_STACK;
-    ctx.fillStyle = '#9b8fae';
-    ctx.textAlign = 'left';
-    ctx.fillText('いんぱ手帳', W/2 - 56, H - 48);
-    ctx.textAlign = 'left';
-  }
-
-  /** 単発記録カード：1080x1920。日付／パーク名／パスポート種別／当選ショー・座席位置（あれば）をまとめる。 */
-  function composeRecordCardImage(r){
-    const W = 1080, H = 1920;
-    const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
-    const ctx = canvas.getContext('2d');
-    drawBrandHeaderFooter(ctx, W, H, '入園記録');
-
-    const cat = parkCategory(r.parkId);
-    const catColor = categoryColor(cat);
-    const cardX = 90, cardY = 420, cardW = W - 180, cardH = 1060, pad = 72;
-    ctx.save();
-    ctx.shadowColor = 'rgba(36,28,51,0.18)';
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetY = 18;
-    drawRoundRect(ctx, cardX, cardY, cardW, cardH, 40);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-    ctx.restore();
-
-    let y = cardY + pad + 10;
-    // 分類ドット＋カテゴリ名
-    ctx.beginPath();
-    ctx.arc(cardX + pad + 10, y, 12, 0, Math.PI*2);
-    ctx.fillStyle = catColor;
-    ctx.fill();
-    ctx.font = '700 30px ' + FONT_STACK;
-    ctx.fillStyle = '#5c536b';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(cat, cardX + pad + 34, y + 1);
-    y += 70;
-
-    // 日付
-    ctx.font = '600 42px ' + FONT_STACK;
-    ctx.fillStyle = '#948b9f';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(formatDateJp(r.date) + '（' + ['日','月','火','水','木','金','土'][new Date(r.date+'T00:00:00').getDay()] + '）', cardX + pad, y + 40);
-    y += 100;
-
-    // パーク名（大きく、収まらなければ縮小）
-    const parkText = parkName(r.parkId);
-    let parkSize = 78;
-    ctx.font = '800 ' + parkSize + 'px ' + FONT_STACK;
-    while(ctx.measureText(parkText).width > cardW - pad*2 && parkSize > 44){
-      parkSize -= 4;
-      ctx.font = '800 ' + parkSize + 'px ' + FONT_STACK;
-    }
-    ctx.fillStyle = '#241c33';
-    ctx.fillText(truncateToWidth(ctx, parkText, cardW - pad*2), cardX + pad, y + parkSize*0.78);
-    y += parkSize + 56;
-
-    // パスポート種別ピル
-    const passText = passTypeName(r.passTypeId);
-    ctx.font = '700 32px ' + FONT_STACK;
-    const passW = ctx.measureText(passText).width + 56;
-    drawRoundRect(ctx, cardX + pad, y, passW, 64, 32);
-    ctx.fillStyle = '#ffe1ea';
-    ctx.fill();
-    ctx.fillStyle = '#ff6f91';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(passText, cardX + pad + 28, y + 33);
-    y += 64 + 44;
-    ctx.textBaseline = 'alphabetic';
-
-    // 当選ショー・座席位置
-    if(r.showId){
-      const showText = '当選：' + showName(r.showId);
-      ctx.font = '700 34px ' + FONT_STACK;
-      const showW = Math.min(cardW - pad*2, ctx.measureText(showText).width + 56);
-      drawRoundRect(ctx, cardX + pad, y, showW, 70, 35);
-      ctx.fillStyle = '#f5a623';
-      ctx.fill();
-      ctx.fillStyle = '#3a2600';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(truncateToWidth(ctx, showText, showW - 56), cardX + pad + 28, y + 36);
-      ctx.textBaseline = 'alphabetic';
-      y += 70 + 36;
-      if(r.seatPosition){
-        ctx.font = '500 32px ' + FONT_STACK;
-        ctx.fillStyle = '#5c536b';
-        ctx.fillText('座席：' + truncateToWidth(ctx, r.seatPosition, cardW - pad*2 - 140), cardX + pad, y);
-        y += 56;
-      }
-    }
-
-    // 金額
-    if(r.amount){
-      const bottomY = cardY + cardH - pad;
-      ctx.font = '500 30px ' + FONT_STACK;
-      ctx.fillStyle = '#948b9f';
-      ctx.fillText('金額', cardX + pad, bottomY - 56);
-      ctx.font = '800 56px ' + FONT_STACK;
-      ctx.fillStyle = '#241c33';
-      ctx.fillText(Number(r.amount).toLocaleString('ja-JP') + '円', cardX + pad, bottomY);
-    }
-
-    return canvas;
-  }
-
-  /** 年間まとめ画像：1080x1920。選択中の年の合計イン数・カテゴリ別内訳（件数・割合）・金額合計。 */
-  function composeYearSummaryImage(year){
-    const W = 1080, H = 1920;
-    const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
-    const ctx = canvas.getContext('2d');
-    drawBrandHeaderFooter(ctx, W, H, year + '年 いんぱ年間まとめ');
-
-    const records = recordsOfYear(year);
-    const total = records.length;
-    const totalAmount = records.reduce(function(acc, r){ return acc + (r.amount||0); }, 0);
-    const byCategory = {};
-    records.forEach(function(r){
-      const cat = parkCategory(r.parkId);
-      byCategory[cat] = (byCategory[cat] || 0) + 1;
-    });
-    const segments = Object.keys(byCategory).map(function(cat){
-      return { name: cat, value: byCategory[cat], color: categoryColor(cat) };
-    }).sort(function(a,b){ return b.value - a.value; });
-
-    const cardX = 90, cardY = 420, cardW = W - 180, pad = 72;
-
-    // ヒーロー数値（合計イン数）
-    ctx.textAlign = 'center';
-    ctx.font = '600 36px ' + FONT_STACK;
-    ctx.fillStyle = '#5c536b';
-    ctx.fillText('合計イン数', W/2, cardY + 20);
-    ctx.font = '800 220px ' + FONT_STACK;
-    ctx.fillStyle = '#ff6f91';
-    ctx.fillText(String(total), W/2, cardY + 230);
-    ctx.font = '700 44px ' + FONT_STACK;
-    ctx.fillStyle = '#241c33';
-    ctx.fillText('イン', W/2, cardY + 290);
-    ctx.textAlign = 'left';
-
-    // カテゴリ別内訳（細いバー、角丸、ラベル直書き。dataviz方針: 1指標・カテゴリカル配色・凡例代わりの直接ラベル）
-    let y = cardY + 400;
-    ctx.font = '700 32px ' + FONT_STACK;
-    ctx.fillStyle = '#241c33';
-    ctx.fillText('カテゴリ別内訳', cardX, y);
-    y += 56;
-    const maxVal = Math.max.apply(null, segments.map(function(s){ return s.value; }).concat([1]));
-    const barMaxW = cardW - 320;
-    segments.forEach(function(seg){
-      const pct = total > 0 ? Math.round((seg.value/total)*100) : 0;
+    radialGlow(ctx, W * 0.92, H * 0.98, 1100, 'rgba(255,111,145,0.38)');
+    radialGlow(ctx, W * 0.05, H * 0.02, 900, 'rgba(150,132,232,0.26)');
+    radialGlow(ctx, W * 0.5, H * 0.45, 700, 'rgba(120,96,200,0.08)');
+    // 星：固定シードの疑似乱数で毎回同じ配置にする。上ほど多く、下ほど少なく。
+    const rand = seededRandom(20261111);
+    for(let i = 0; i < 150; i++){
+      const x = rand() * W;
+      const y = Math.pow(rand(), 1.7) * H;
+      const r = 0.7 + rand() * 1.8;
       ctx.beginPath();
-      ctx.arc(cardX + 14, y + 14, 12, 0, Math.PI*2);
-      ctx.fillStyle = seg.color;
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.12 + rand() * 0.45).toFixed(2) + ')';
       ctx.fill();
-      ctx.font = '600 34px ' + FONT_STACK;
-      ctx.fillStyle = '#241c33';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(seg.name, cardX + 44, y + 15);
+    }
+  }
 
-      const barW = Math.max((seg.value/maxVal) * barMaxW, 10);
-      drawRoundRect(ctx, cardX, y + 42, barMaxW, 22, 11);
-      ctx.fillStyle = '#e6e1ef';
-      ctx.fill();
-      drawRoundRect(ctx, cardX, y + 42, barW, 22, 11);
-      ctx.fillStyle = seg.color;
-      ctx.fill();
+  /**
+   * 写真背景：cover方式で事前にトリミング済みの1080x1920キャンバスを敷き、可読性のための暗幕を重ねる。
+   * overlay = { base:全体の暗さ, top/topLen:上端からのグラデーション, bottom/bottomLen:下端からのグラデーション }
+   */
+  function drawPhotoBackground(ctx, W, H, bgCanvas, overlay){
+    ctx.drawImage(bgCanvas, 0, 0, W, H);
+    const ink = '14,9,24';
+    if(overlay.base > 0){
+      ctx.fillStyle = 'rgba(' + ink + ',' + overlay.base + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+    if(overlay.top > 0){
+      const t = ctx.createLinearGradient(0, 0, 0, overlay.topLen);
+      t.addColorStop(0, 'rgba(' + ink + ',' + overlay.top + ')');
+      t.addColorStop(1, 'rgba(' + ink + ',0)');
+      ctx.fillStyle = t;
+      ctx.fillRect(0, 0, W, overlay.topLen);
+    }
+    if(overlay.bottom > 0){
+      const b = ctx.createLinearGradient(0, H - overlay.bottomLen, 0, H);
+      b.addColorStop(0, 'rgba(' + ink + ',0)');
+      b.addColorStop(0.55, 'rgba(' + ink + ',' + (overlay.bottom * 0.75).toFixed(3) + ')');
+      b.addColorStop(1, 'rgba(' + ink + ',' + overlay.bottom + ')');
+      ctx.fillStyle = b;
+      ctx.fillRect(0, H - overlay.bottomLen, W, overlay.bottomLen);
+    }
+  }
+  /** 写真背景のときだけ文字に控えめな影を付ける（標準背景では不要）。 */
+  function setTextShadow(ctx, on){
+    if(on){
+      ctx.shadowColor = 'rgba(0,0,0,0.45)';
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 2;
+    } else {
+      ctx.shadowColor = 'rgba(0,0,0,0)';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+    }
+  }
+  function newStoryCanvas(){
+    const canvas = document.createElement('canvas');
+    canvas.width = STORY_W; canvas.height = STORY_H;
+    return canvas;
+  }
+  function dateParts(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return { y: d.getFullYear(), md: mm + '.' + dd, ymd: d.getFullYear() + '.' + mm + '.' + dd, wd: WEEKDAY_EN[d.getDay()] };
+  }
 
-      ctx.font = '600 30px ' + FONT_STACK;
-      ctx.fillStyle = '#5c536b';
-      ctx.textAlign = 'right';
-      ctx.fillText(seg.value + 'イン（' + pct + '%）', cardX + cardW, y + 15);
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
-      y += 110;
-    });
+  /**
+   * 単発記録カード：パーク名（英語名）を主役に、日付・パスポート種別・当選ショー／座席位置（あれば）を
+   * 余白を大きく取って配置する。写真背景のときは写真を見せるため文字ブロックを下寄せ、
+   * 標準背景のときは中央寄せにする。
+   */
+  function composeRecordCardImage(r, bgCanvas){
+    const W = STORY_W, H = STORY_H;
+    const canvas = newStoryCanvas();
+    const ctx = canvas.getContext('2d');
+    const photo = !!bgCanvas;
+    if(photo) drawPhotoBackground(ctx, W, H, bgCanvas, { base:0.15, top:0.32, topLen:520, bottom:0.88, bottomLen:1450 });
+    else drawStandardBackground(ctx, W, H);
 
-    // 金額合計
-    y += 24;
-    drawRoundRect(ctx, cardX, y, cardW, 150, 28);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-    ctx.font = '600 32px ' + FONT_STACK;
-    ctx.fillStyle = '#948b9f';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('合計金額', cardX + 44, y + 54);
-    ctx.font = '800 58px ' + FONT_STACK;
-    ctx.fillStyle = '#241c33';
-    ctx.fillText(totalAmount.toLocaleString('ja-JP') + '円', cardX + 44, y + 108);
+    const X = 108, maxW = W - X * 2;
+    const dp = dateParts(r.date);
+
+    // パーク名：英語名（空白区切り）は単語単位で最大2行まで、収まる最大サイズを探す（150px→84px）。
+    // 空白を含まない日本語名は語の途中で改行すると不格好なため、まず1行に収まるまで縮小（→64px）し、
+    // それでも入らない極端に長い名称のときだけ文字単位で2行に折り返す。最後の手段として2行目を省略。
+    const nameText = parkImageName(r.parkId);
+    const nameHasSpace = /\s/.test(nameText);
+    let nameSize = 150, nameLines;
+    while(true){
+      imgFont(ctx, 600, nameSize, IMG_SERIF);
+      if(nameHasSpace){
+        nameLines = wrapLines(ctx, nameText, maxW);
+      } else {
+        nameLines = ctx.measureText(nameText).width <= maxW || nameSize > 64 ? [nameText] : wrapLines(ctx, nameText, maxW);
+      }
+      const fits = nameLines.length <= 2 && nameLines.every(function(l){ return ctx.measureText(l).width <= maxW; });
+      if(fits || nameSize <= (nameHasSpace ? 84 : 64)) break;
+      nameSize -= 4;
+    }
+    if(nameLines.length > 2){
+      nameLines = [nameLines[0], truncateToWidth(ctx, nameLines.slice(1).join(nameHasSpace ? ' ' : ''), maxW)];
+    }
+    const nameLineH = Math.round(nameSize * 1.02);
+
+    // 詳細（ラベル＋値の2列）
+    const details = [{ label:'TICKET', value: passTypeName(r.passTypeId) || '—', color: IMG_TEXT }];
+    if(r.showId){
+      details.push({ label:'SHOW', value: showName(r.showId), color: IMG_GOLD, labelColor: IMG_GOLD });
+      if(r.seatPosition) details.push({ label:'SEAT', value: String(r.seatPosition), color: IMG_TEXT });
+    }
+    const metaH = 40, gapMetaName = 44, gapNameRule = 56, ruleH = 4, gapRuleDetails = 64, detailRowH = 74;
+    const blockH = metaH + gapMetaName + nameLineH * nameLines.length + gapNameRule + ruleH + gapRuleDetails + detailRowH * details.length;
+    const safeTop = STORY_SAFE, safeBottom = H - STORY_SAFE;
+    const top = photo
+      ? safeBottom - 30 - blockH
+      : Math.round(safeTop + (safeBottom - safeTop - blockH) / 2 - 40);
+
+    setTextShadow(ctx, photo);
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
 
+    // 1) メタ行：カテゴリ色の小さなドット＋日付＋曜日
+    let y = top + 30;
+    ctx.beginPath();
+    ctx.arc(X + 9, y - 11, 9, 0, Math.PI * 2);
+    ctx.fillStyle = imageCategoryColor(parkCategory(r.parkId));
+    ctx.fill();
+    imgFont(ctx, 500, 32, IMG_SANS);
+    ctx.fillStyle = imgSoft(photo);
+    let mx = drawSpaced(ctx, dp.ymd, X + 38, y, 4);
+    ctx.fillStyle = imgMuted(photo);
+    drawSpaced(ctx, '·', mx + 18, y, 0);
+    drawSpaced(ctx, dp.wd, mx + 46, y, 6);
+    y = top + metaH + gapMetaName;
+
+    // 2) パーク名
+    imgFont(ctx, 600, nameSize, IMG_SERIF);
+    ctx.fillStyle = IMG_TEXT;
+    nameLines.forEach(function(line, i){
+      ctx.fillText(line, X - nameSize * 0.03, y + nameSize * 0.78 + i * nameLineH);
+    });
+    y += nameLineH * nameLines.length + gapNameRule;
+
+    // 3) アクセントの短い罫線
+    setTextShadow(ctx, false);
+    ctx.fillStyle = IMG_ACCENT;
+    ctx.fillRect(X, y, 84, ruleH);
+    setTextShadow(ctx, photo);
+    y += ruleH + gapRuleDetails;
+
+    // 4) 詳細
+    const labelW = 190;
+    details.forEach(function(d, i){
+      const by = y + i * detailRowH + 34;
+      imgFont(ctx, 500, 24, IMG_SANS);
+      ctx.fillStyle = d.labelColor || imgMuted(photo);
+      drawSpaced(ctx, d.label, X, by - 3, 6);
+      const vSize = fitSize(ctx, d.value, maxW - labelW, 500, 40, 30, IMG_SANS);
+      imgFont(ctx, 500, vSize, IMG_SANS);
+      ctx.fillStyle = d.color;
+      ctx.fillText(truncateToWidth(ctx, d.value, maxW - labelW), X + labelW, by);
+    });
+    setTextShadow(ctx, false);
     return canvas;
   }
 
-  function openOutputModal(canvas, filename){
+  /**
+   * 年間まとめ画像の段組み・文字サイズ。件数に応じて段階的に切り替える。
+   *  - 〜6件: 1列・特大 / 〜10件: 1列・大 / 〜16件: 1列・中
+   *  - 17〜24件: 2列・中 / 25件〜: 2列・小（行高は残り高さから自動算出。40件程度まで破綻しない）
+   */
+  function summaryLayoutTier(n){
+    if(n <= 6)  return { cols:1, yearSize:210, rowH:132, nameSize:54, dateSize:34, weekday:true };
+    if(n <= 10) return { cols:1, yearSize:180, rowH:110, nameSize:48, dateSize:32, weekday:true };
+    if(n <= 16) return { cols:1, yearSize:150, rowH:80,  nameSize:40, dateSize:29, weekday:true };
+    if(n <= 24) return { cols:2, yearSize:140, rowH:90,  nameSize:32, dateSize:25, weekday:false };
+    return            { cols:2, yearSize:122, rowH:72,  nameSize:29, dateSize:23, weekday:false };
+  }
+
+  /** 年間まとめ画像：対象年のインパークを日付昇順で「日付＋パーク名（英語）」の一覧にする。 */
+  function composeYearSummaryImage(year, bgCanvas){
+    const W = STORY_W, H = STORY_H;
+    const canvas = newStoryCanvas();
+    const ctx = canvas.getContext('2d');
+    const photo = !!bgCanvas;
+    if(photo) drawPhotoBackground(ctx, W, H, bgCanvas, { base:0.52, top:0.3, topLen:640, bottom:0.3, bottomLen:640 });
+    else drawStandardBackground(ctx, W, H);
+
+    const records = recordsOfYear(year).slice().sort(function(a, b){
+      return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
+    });
+    const n = records.length;
+    const t = summaryLayoutTier(n);
+    const rows = Math.ceil(n / t.cols);
+
+    const X = t.cols === 1 ? 118 : 92;
+    const contentW = W - X * 2;
+    const gutter = 64;
+    const colW = t.cols === 1 ? contentW : (contentW - gutter) / 2;
+
+    // 見出し（年＋件数）の高さ
+    // Cormorant Garamondの数字はオールドスタイル（3,4,5,7,9が下に突き出る）なので、ディセンダ分の余白を取る
+    const yearCap = Math.round(t.yearSize * 0.70);
+    const yearDesc = Math.round(t.yearSize * 0.24);
+    const headerH = yearCap + yearDesc + 24 + 34 + 64; // 年 + ディセンダ + 間隔 + 件数行 + 一覧までの余白
+    const safeH = H - STORY_SAFE * 2;
+    const listMax = safeH - headerH - 20;
+    const rowH = Math.min(t.rowH, Math.floor(listMax / Math.max(rows, 1)));
+    const k = rowH / t.rowH; // 行高を詰めた分だけ文字も縮める
+    const nameSize = Math.round(t.nameSize * Math.max(k, 0.82));
+    const dateSize = Math.round(t.dateSize * Math.max(k, 0.82));
+    const blockH = headerH + rowH * rows;
+    const top = Math.round(STORY_SAFE + Math.max(0, (safeH - blockH) / 2) * 0.85);
+
+    setTextShadow(ctx, photo);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+
+    // 1) 年（セリフ体）
+    imgFont(ctx, 500, t.yearSize, IMG_SERIF);
+    ctx.fillStyle = IMG_TEXT;
+    ctx.fillText(String(year), X - t.yearSize * 0.04, top + yearCap);
+    // 2) 件数（小さく、字間を空けて）＋アクセントの点
+    const countY = top + yearCap + yearDesc + 24 + 26;
+    setTextShadow(ctx, false);
+    ctx.fillStyle = IMG_ACCENT;
+    ctx.fillRect(X, countY - 11, 40, 3);
+    setTextShadow(ctx, photo);
+    imgFont(ctx, 500, 26, IMG_SANS);
+    ctx.fillStyle = imgSoft(photo);
+    drawSpaced(ctx, n + (n === 1 ? ' VISIT' : ' VISITS'), X + 58, countY, 7);
+
+    // 3) 一覧
+    const listTop = top + headerH;
+    imgFont(ctx, 500, dateSize, IMG_SANS);
+    const dateW = ctx.measureText('00.00').width;
+    let wdW = 0;
+    if(t.weekday){
+      imgFont(ctx, 500, Math.round(dateSize * 0.62), IMG_SANS);
+      wdW = spacedWidth(ctx, 'WED', 3);
+    }
+    const dotR = Math.max(5, Math.round(dateSize * 0.2));
+    const dotSpace = dotR * 2 + Math.round(dateSize * 0.55);
+    const dateColW = dotSpace + dateW + (t.weekday ? 18 + wdW : 0) + Math.round(dateSize * (t.cols === 1 ? 1.1 : 0.75));
+    const nameMaxW = colW - dateColW;
+
+    records.forEach(function(r, i){
+      const col = t.cols === 1 ? 0 : Math.floor(i / rows); // 列優先（左列を上から下へ→右列）で日付順に読めるようにする
+      const row = t.cols === 1 ? i : i % rows;
+      const x = X + col * (colW + gutter);
+      const rowTop = listTop + row * rowH;
+      const base = Math.round(rowTop + rowH / 2 + nameSize * 0.34);
+
+      // 1列表示のときは行間に細い罫線（写真上でもうるさくならないよう極薄に）
+      if(t.cols === 1 && row > 0){
+        setTextShadow(ctx, false);
+        ctx.fillStyle = 'rgba(255,255,255,0.11)';
+        ctx.fillRect(x, rowTop, colW, 1);
+        setTextShadow(ctx, photo);
+      }
+      const dp = dateParts(r.date);
+      ctx.beginPath();
+      ctx.arc(x + dotR, base - dateSize * 0.36, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = imageCategoryColor(parkCategory(r.parkId));
+      ctx.fill();
+
+      imgFont(ctx, 500, dateSize, IMG_SANS);
+      ctx.fillStyle = imgSoft(photo);
+      ctx.fillText(dp.md, x + dotSpace, base);
+      if(t.weekday){
+        imgFont(ctx, 500, Math.round(dateSize * 0.62), IMG_SANS);
+        ctx.fillStyle = imgMuted(photo);
+        drawSpaced(ctx, dp.wd, x + dotSpace + dateW + 18, base, 3);
+      }
+
+      const nm = parkImageName(r.parkId);
+      const s = fitSize(ctx, nm, nameMaxW, 500, nameSize, Math.round(nameSize * 0.7), IMG_SANS);
+      imgFont(ctx, 500, s, IMG_SANS);
+      ctx.fillStyle = IMG_TEXT;
+      ctx.fillText(truncateToWidth(ctx, nm, nameMaxW), x + dateColW, base);
+    });
+    setTextShadow(ctx, false);
+    return canvas;
+  }
+
+  /* ---- 背景画像（ローカル読み込みのみ。サーバーへは送らない） ---- */
+
+  /** 選択された画像ファイルを読み込む。デコードできない形式（HEIC非対応ブラウザ等）はrejectする。 */
+  function loadLocalImage(file){
+    return new Promise(function(resolve, reject){
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = function(){
+        if(!img.naturalWidth || !img.naturalHeight){ URL.revokeObjectURL(url); reject(new Error('empty image')); return; }
+        resolve({ img: img, release: function(){ URL.revokeObjectURL(url); } });
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('decode failed')); };
+      img.src = url;
+    });
+  }
+  /**
+   * 画像を1080x1920にcover方式でトリミングしたキャンバスを作る（縦横比を保って全面を覆い、はみ出しは中央基準で切る）。
+   * 4000px級のスマホ写真でも、ここで一度だけ縮小しておけば以後の再描画は軽い。縮小は半分ずつ段階的に行い、
+   * 一気に縮めたときのジャギー・モアレを抑える。
+   */
+  function buildCoverCanvas(img, W, H){
+    const sw = img.naturalWidth, sh = img.naturalHeight;
+    const scale = Math.max(W / sw, H / sh);
+    let src = img;
+    let sx = (sw - W / scale) / 2, sy = (sh - H / scale) / 2, sWidth = W / scale, sHeight = H / scale;
+    while(sWidth > W * 2 && sHeight > H * 2){
+      const tmp = document.createElement('canvas');
+      tmp.width = Math.round(sWidth / 2); tmp.height = Math.round(sHeight / 2);
+      const tctx = tmp.getContext('2d');
+      tctx.imageSmoothingEnabled = true;
+      tctx.imageSmoothingQuality = 'high';
+      tctx.drawImage(src, sx, sy, sWidth, sHeight, 0, 0, tmp.width, tmp.height);
+      src = tmp; sx = 0; sy = 0; sWidth = tmp.width; sHeight = tmp.height;
+    }
+    const out = document.createElement('canvas');
+    out.width = W; out.height = H;
+    const octx = out.getContext('2d');
+    octx.imageSmoothingEnabled = true;
+    octx.imageSmoothingQuality = 'high';
+    octx.drawImage(src, sx, sy, sWidth, sHeight, 0, 0, W, H);
+    return out;
+  }
+
+  /* ---- 出力モーダル ---- */
+  const outputState = { kind:null, record:null, year:null, filename:'', bgCanvas:null, renderSeq:0, downloadUrl:null };
+
+  function setDownloadReady(url){
+    const a = document.getElementById('outputDownloadBtn');
+    if(outputState.downloadUrl){ URL.revokeObjectURL(outputState.downloadUrl); outputState.downloadUrl = null; }
+    if(url){
+      outputState.downloadUrl = url;
+      a.href = url; a.download = outputState.filename;
+      a.classList.remove('is-pending');
+    } else {
+      a.removeAttribute('href');
+      a.classList.add('is-pending');
+    }
+  }
+  function updateBgButtons(loading){
+    document.getElementById('outputBgPickLabel').textContent = loading ? '読み込み中…' : (outputState.bgCanvas ? '背景画像を変える' : '背景画像を選ぶ');
+    document.getElementById('outputBgPickBtn').classList.toggle('is-pending', !!loading);
+    document.getElementById('outputBgClearBtn').style.display = outputState.bgCanvas ? '' : 'none';
+  }
+  /** 現在の出力対象・背景でプレビューとダウンロード用PNGを作り直す。連続操作時は最後の描画だけを採用する。 */
+  async function renderOutput(){
+    const seq = ++outputState.renderSeq;
+    setDownloadReady(null);
+    await ensureImageFonts();
+    if(seq !== outputState.renderSeq) return;
+    const canvas = outputState.kind === 'record'
+      ? composeRecordCardImage(outputState.record, outputState.bgCanvas)
+      : composeYearSummaryImage(outputState.year, outputState.bgCanvas);
     const outCanvas = document.getElementById('outputCanvas');
     outCanvas.width = canvas.width; outCanvas.height = canvas.height;
     outCanvas.getContext('2d').drawImage(canvas, 0, 0);
     canvas.toBlob(function(blob){
-      const url = URL.createObjectURL(blob);
-      const a = document.getElementById('outputDownloadBtn');
-      a.href = url; a.download = filename;
+      if(seq !== outputState.renderSeq || !blob) return;
+      setDownloadReady(URL.createObjectURL(blob));
     }, 'image/png');
-    document.getElementById('outputModal').classList.add('active');
   }
-  window.closeOutputModal = function(){ document.getElementById('outputModal').classList.remove('active'); };
+  function openOutputModal(){
+    updateBgButtons(false);
+    const outCanvas = document.getElementById('outputCanvas');
+    outCanvas.getContext('2d').clearRect(0, 0, outCanvas.width, outCanvas.height);
+    document.getElementById('outputModal').classList.add('active');
+    renderOutput();
+  }
+  window.closeOutputModal = function(){
+    document.getElementById('outputModal').classList.remove('active');
+    outputState.renderSeq++;
+    outputState.bgCanvas = null; // 背景画像はその場限り。閉じたら破棄する
+    setDownloadReady(null);
+  };
+  window.onOutputBgSelected = async function(input){
+    const file = input.files && input.files[0];
+    input.value = ''; // 同じファイルを選び直しても change が発火するようにする
+    if(!file) return;
+    updateBgButtons(true);
+    try{
+      const loaded = await loadLocalImage(file);
+      try{
+        outputState.bgCanvas = buildCoverCanvas(loaded.img, STORY_W, STORY_H);
+      } finally {
+        loaded.release();
+      }
+    }catch(e){
+      console.warn(e);
+      toast('この形式の画像は読み込めませんでした。JPEG/PNGでお試しください');
+    }
+    updateBgButtons(false);
+    renderOutput();
+  };
+  window.clearOutputBg = function(){
+    outputState.bgCanvas = null;
+    updateBgButtons(false);
+    renderOutput();
+  };
 
   window.generateRecordCardImage = function(recordId){
     const id = recordId || state.editingRecordId;
     const r = findById(userRecords(), id);
     if(!r){ toast('記録が見つかりませんでした'); return; }
-    const canvas = composeRecordCardImage(r);
-    openOutputModal(canvas, parkName(r.parkId) + '_' + r.date + '.png');
+    outputState.kind = 'record';
+    outputState.record = r;
+    outputState.filename = parkName(r.parkId) + '_' + r.date + '.png';
+    openOutputModal();
   };
 
   window.generateYearSummaryImage = function(){
@@ -1821,8 +2137,10 @@
     }
     const year = Number(state.summaryYearFilter);
     if(recordsOfYear(year).length === 0){ toast(year + '年の記録がありません'); return; }
-    const canvas = composeYearSummaryImage(year);
-    openOutputModal(canvas, year + '_inpa_summary.png');
+    outputState.kind = 'year';
+    outputState.year = year;
+    outputState.filename = year + '_inpa_summary.png';
+    openOutputModal();
   };
 
   /* ============================================================
