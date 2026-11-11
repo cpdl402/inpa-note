@@ -1076,6 +1076,9 @@
     document.getElementById('regPin').value = '';
     document.getElementById('regPinConfirm').value = '';
     document.getElementById('regError').textContent = '';
+    // ログイン失敗のエラー表示・赤枠を、新規登録→自動ログイン→ログアウト後まで持ち越さない
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('loginPin').classList.remove('input-error');
     navigate('register');
   };
 
@@ -1087,9 +1090,15 @@
     if(!pin){ errEl.textContent = '暗証番号を入力してください'; return; }
     const res = await apiPost('Auth', 'login', { name:name, pin:pin });
     if(!res.ok){
-      // 名前とPINのどちらが違うか分からないよう、サーバーの文言に関係なく1種類の文言だけを出す
-      errEl.textContent = '名前またはPINが違います';
-      document.getElementById('loginPin').classList.add('input-error');
+      // 認証の失敗は、名前とPINのどちらが違うか分からないよう1種類の文言だけを出す（サーバーも同じ文言）。
+      // 通信エラーやGAS側のエラー（ロック待ちの時間切れ等）まで同じ文言にすると「PINを間違えた」と誤解されるため分ける。
+      const isAuthFailure = String(res.error || '').indexOf('名前またはPINが違います') !== -1;
+      if(isAuthFailure){
+        errEl.textContent = '名前またはPINが違います';
+        document.getElementById('loginPin').classList.add('input-error');
+      } else {
+        errEl.textContent = '通信に失敗しました。時間をおいてもう一度お試しください';
+      }
       return;
     }
     errEl.textContent = '';
@@ -1133,6 +1142,7 @@
       state.recordFilters = { parks: [], passTypes: [] }; // 次にログインする人へ絞り込み条件を持ち越さない
       document.getElementById('loginName').value = '';
       document.getElementById('loginPin').value = '';
+      document.getElementById('loginPin').classList.remove('input-error'); // 前回の失敗時の赤枠を残さない
       document.getElementById('loginError').textContent = '';
       navigate('login');
     }, 'ログアウト');
