@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>いんぱ手帳</title>
+<title>D-COUNT</title>
 <style>
   :root{
     --surface-0:#f7f5fb; --surface-1:#fdfcff; --surface-2:#ffffff;
@@ -79,15 +79,13 @@
   }
   .auth-card .field{margin-bottom:16px;}
   .auth-card .field label{display:block; font-size:12px; color:var(--text-muted); margin-bottom:6px; font-weight:700;}
-  .auth-card select{
+  /* iPhoneのSafariは16px未満の入力欄をタップすると画面を拡大するため、ログイン・新規登録の入力欄は16px以上にする */
+  .auth-wrap .auth-card .field input{
     width:100%; padding:13px 12px; border-radius:12px; border:1px solid var(--border);
-    background:var(--surface-1); color:var(--text-primary); font-size:15px;
+    background:var(--surface-1); color:var(--text-primary); font-size:16px;
   }
-  .pin-input{
-    width:100%; padding:13px 12px; border-radius:12px; border:1px solid var(--border);
-    background:var(--surface-1); color:var(--text-primary); font-size:22px; letter-spacing:10px;
-    text-align:center; font-variant-numeric:tabular-nums;
-  }
+  .auth-card .field .field-hint{font-size:11.5px; color:var(--text-muted); margin:6px 2px 0; line-height:1.5; font-weight:400;}
+  .btn.is-busy{opacity:0.6; cursor:progress;}
   .input-error{border-color:var(--critical) !important;}
   .error-text{color:var(--critical); font-size:12px; margin:8px 0 0; min-height:16px;}
   .auth-links{margin-top:16px; text-align:center; font-size:13px;}
@@ -131,7 +129,7 @@
   .record-card:active{transform:scale(0.99);}
   .record-dot{
     flex:none; width:14px; height:14px; border-radius:50%; margin-top:5px; cursor:pointer;
-    box-shadow:0 0 0 3px var(--surface-0);
+    box-shadow:0 0 0 3px var(--surface-0), inset 0 0 0 1px rgba(20,10,25,0.16);
   }
   .record-info{flex:1; min-width:0;}
   .record-date{font-size:12px; color:var(--text-muted); margin-bottom:2px; font-variant-numeric:tabular-nums;}
@@ -181,9 +179,10 @@
     border:1.5px solid var(--border); background:var(--surface-1); color:var(--text-secondary);
     font-size:13px; font-weight:700; cursor:pointer; min-height:36px;
   }
-  .chip .chip-dot{width:8px; height:8px; border-radius:50%; flex:none;}
+  .chip .chip-dot{width:10px; height:10px; border-radius:50%; flex:none; box-shadow:inset 0 0 0 1px rgba(20,10,25,0.16);}
   .chip.active{background:var(--brand); color:var(--brand-ink); border-color:var(--brand);}
-  .chip.active .chip-dot{background:var(--brand-ink) !important;}
+  /* 選択中もパークの色は変えない（一覧のドットと対応させるため）。ピンクの地に埋もれないよう白い縁を付ける */
+  .chip.active .chip-dot{box-shadow:0 0 0 2px var(--brand-ink);}
   .filter-clear-btn{
     width:100%; margin-top:12px; padding:10px; border-radius:11px; border:none; background:transparent;
     color:var(--critical); font-weight:700; font-size:13px; cursor:pointer;
@@ -191,8 +190,9 @@
   .records-legend{
     display:flex; flex-wrap:wrap; gap:10px 14px; margin-bottom:12px; padding:2px 2px;
   }
-  .legend-chip{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-muted); cursor:pointer;}
-  .legend-chip .dot{width:9px; height:9px; border-radius:50%; flex:none;}
+  .legend-chip{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-secondary); cursor:pointer;}
+  .legend-chip .dot{width:10px; height:10px; border-radius:50%; flex:none; box-shadow:inset 0 0 0 1px rgba(20,10,25,0.16);}
+  /* パークの色（黄色など明るい色）が明るい背景に溶けないよう、点・見本には薄い縁を付ける。文字はパークの色にしない */
 
   /* ==== グラフ共通 ==== */
   .chart-card{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:16px;}
@@ -210,7 +210,7 @@
   .donut-center .unit{font-size:10px; color:var(--text-muted); margin-top:2px;}
   .legend-list{flex:1; min-width:150px; display:flex; flex-direction:column; gap:8px;}
   .legend-row{display:flex; align-items:center; gap:8px; font-size:12.5px; cursor:pointer;}
-  .legend-swatch{flex:none; width:11px; height:11px; border-radius:3px;}
+  .legend-swatch{flex:none; width:12px; height:12px; border-radius:3px; box-shadow:inset 0 0 0 1px rgba(20,10,25,0.16);}
   .legend-name{flex:1; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .legend-value{flex:none; color:var(--text-secondary); font-variant-numeric:tabular-nums;}
 
@@ -422,10 +422,98 @@
   .output-stage.mode-text .output-text-frame{display:block;}
   .output-stage.mode-text.is-dragging .output-text-frame{border-style:solid; border-color:#fff;}
 
+  /* ==== マスタ管理：パークの色 ==== */
+  .master-item .name-wrap{display:flex; align-items:center; gap:7px; min-width:0; max-width:100%;}
+  .master-item .park-color-dot{
+    flex:none; width:14px; height:14px; border-radius:50%; box-shadow:inset 0 0 0 1px rgba(20,10,25,0.16);
+  }
+  .color-swatches{display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; max-width:320px;}
+  .color-swatch{
+    position:relative; width:100%; aspect-ratio:1 / 1; min-height:44px; border-radius:50%; cursor:pointer; padding:0;
+    border:none; box-shadow:inset 0 0 0 1px rgba(20,10,25,0.16);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .color-swatch svg{display:none;}
+  .color-swatch.on{box-shadow:0 0 0 3px var(--surface-1), 0 0 0 5px var(--text-primary);}
+  .color-swatch.on svg{display:block;}
+  .color-swatch .used-mark{
+    position:absolute; right:-2px; top:-2px; width:12px; height:12px; border-radius:50%;
+    background:var(--surface-1); box-shadow:inset 0 0 0 3px var(--text-muted);
+  }
+  .color-pick-status{font-size:12px; color:var(--text-secondary); margin:10px 2px 0; line-height:1.5; min-height:18px;}
+
+  /* ==== 設定：アカウント管理（管理者のみ） ==== */
+  .account-item{padding:14px 0; border-bottom:1px solid var(--gridline);}
+  .account-item:last-child{border-bottom:none; padding-bottom:4px;}
+  .account-head{display:flex; align-items:center; gap:10px;}
+  .account-avatar{
+    flex:none; width:38px; height:38px; border-radius:50%; background:var(--brand-weak); color:var(--brand);
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;
+  }
+  .account-main{flex:1; min-width:0;}
+  .account-name-line{display:flex; align-items:center; gap:6px; min-width:0;}
+  .account-name{font-size:15px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+  .account-self{
+    flex:none; font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:999px;
+    background:var(--brand); color:var(--brand-ink);
+  }
+  .account-name-line .role-badge{margin-left:0; flex:none;}
+  .account-meta{font-size:12px; color:var(--text-muted); margin-top:3px; font-variant-numeric:tabular-nums;}
+  .account-actions{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px;}
+  .account-btn{
+    min-height:44px; padding:6px 4px; border-radius:10px; border:1px solid var(--border); background:var(--surface-1);
+    color:var(--text-primary); font-size:12.5px; font-weight:700; cursor:pointer; line-height:1.25;
+  }
+  .account-btn.danger{color:var(--critical); border-color:rgba(208,59,59,0.35);}
+  .account-btn:disabled{opacity:0.38; cursor:default;}
+  .account-btn:not(:disabled):active{transform:scale(0.97);}
+  .account-self-note{font-size:11.5px; color:var(--text-muted); margin:6px 2px 0;}
+  .account-status{font-size:13px; color:var(--text-muted); padding:14px 0 4px; text-align:center;}
+  .account-status .link-btn{display:inline-block; margin-top:4px;}
+  .confirm-primary{background:var(--brand) !important; color:var(--brand-ink) !important; border-color:var(--brand) !important;}
+  .modal .field input.input-16{font-size:16px;}
+
+  /* ==== 画像出力：年間まとめの段組み ==== */
+  .output-year-layout{margin:0 0 12px;}
+  .output-year-layout .pos-label{font-size:12px; font-weight:700; color:var(--text-muted); margin:0 2px 6px;}
+  .output-year-layout .output-mode-seg{margin-bottom:8px;}
+  .split-stepper{display:flex; align-items:center; gap:10px;}
+  .split-stepper .split-label{flex:1; font-size:13px; color:var(--text-secondary); font-weight:700;}
+  .split-stepper .split-value{min-width:84px; text-align:center; font-size:15px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .step-btn{
+    flex:none; width:46px; height:44px; border-radius:11px; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text-primary); font-size:20px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .step-btn:disabled{opacity:0.35; cursor:default;}
+  .step-btn:not(:disabled):active{transform:scale(0.94);}
+  .modal .layout-note{font-size:11.5px; color:var(--text-muted); margin:6px 2px 0; line-height:1.5; min-height:0;}
+  .modal .layout-note.warn{color:var(--warn-ink); background:var(--warn-weak); padding:6px 10px; border-radius:8px;}
+
+  /* ==== 画像の保存（iPhoneで共有できないとき：画像を大きく表示して長押しで保存してもらう） ====
+     長押しメニューを出すため、画像には -webkit-touch-callout:none / user-select:none / pointer-events:none を付けない */
+  .save-overlay{
+    display:none; position:fixed; inset:0; z-index:60; background:rgba(12,8,20,0.94);
+    flex-direction:column; align-items:center;
+    padding:calc(12px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .save-overlay.active{display:flex;}
+  .save-overlay-bar{width:100%; max-width:560px; display:flex; justify-content:flex-end; margin-bottom:8px;}
+  .save-overlay-close{
+    min-height:44px; padding:0 18px; border-radius:12px; border:1px solid rgba(255,255,255,0.3);
+    background:rgba(255,255,255,0.12); color:#fff; font-size:15px; font-weight:700; cursor:pointer;
+  }
+  .save-overlay-guide{color:#fff; font-size:14.5px; font-weight:700; line-height:1.6; text-align:center; margin:0 0 12px; max-width:480px;}
+  .save-overlay-img-wrap{flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center;}
+  .save-overlay img{
+    display:block; max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;
+    border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,0.5);
+    -webkit-touch-callout:default; -webkit-user-select:auto; user-select:auto;
+  }
+
   .toast{
     position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
     background:var(--text-primary); color:var(--surface-1); padding:10px 18px; border-radius:12px;
-    font-size:13px; z-index:50; opacity:0; pointer-events:none; transition:opacity .2s; max-width:86%; text-align:center;
+    font-size:13px; z-index:80; opacity:0; pointer-events:none; transition:opacity .2s; max-width:86%; text-align:center;
   }
   .toast.show{opacity:0.95;}
 
@@ -441,19 +529,19 @@
       <div class="auth-logo">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.9 7.4.5-5.7 4.8 1.9 7.2L12 16.9 5.8 20.9l1.9-7.2L2 8.9l7.4-.5z"/></svg>
       </div>
-      <h1 class="auth-title">いんぱ手帳</h1>
+      <h1 class="auth-title">D-COUNT</h1>
       <p class="auth-subtitle">ディズニーパーク入園記録</p>
       <div class="auth-card">
         <div class="field">
           <label for="loginName">名前</label>
-          <input type="text" id="loginName" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="登録した名前">
+          <input type="text" id="loginName" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="登録した名前" enterkeyhint="next" onkeydown="onLoginNameKey(event)">
         </div>
         <div class="field">
-          <label for="loginPin">暗証番号（4桁）</label>
-          <input type="password" class="pin-input" id="loginPin" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" placeholder="••••" onkeydown="if(event.key==='Enter') handleLogin()">
+          <label for="loginPassword">パスワード</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" autocapitalize="off" spellcheck="false" enterkeyhint="go" onkeydown="onLoginPasswordKey(event)">
         </div>
         <p class="error-text" id="loginError"></p>
-        <button class="btn primary" style="width:100%;" onclick="handleLogin()">ログイン</button>
+        <button class="btn primary" id="loginBtn" style="width:100%;" onclick="handleLogin()">ログイン</button>
         <div class="auth-links">
           <button class="link-btn" onclick="openRegisterScreen()">新規登録はこちら</button>
         </div>
@@ -468,22 +556,23 @@
         <button class="icon-btn back-btn" onclick="navigate('login')">‹ 戻る</button>
       </div>
       <h1 class="auth-title" style="font-size:19px;">新規登録</h1>
-      <p class="auth-subtitle">名前と暗証番号（4桁）を設定してください</p>
+      <p class="auth-subtitle">名前とパスワードを設定してください</p>
       <div class="auth-card">
         <div class="field">
-          <label>名前</label>
-          <input type="text" id="regName" placeholder="例）やまだ">
+          <label for="regName">名前</label>
+          <input type="text" id="regName" placeholder="例）やまだ" autocomplete="username" autocapitalize="off" spellcheck="false">
         </div>
         <div class="field">
-          <label>暗証番号（4桁）</label>
-          <input type="password" class="pin-input" id="regPin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••">
+          <label for="regPassword">パスワード</label>
+          <input type="password" id="regPassword" autocomplete="new-password" autocapitalize="off" spellcheck="false">
+          <p class="field-hint">英数字4文字以上</p>
         </div>
         <div class="field">
-          <label>暗証番号（確認用）</label>
-          <input type="password" class="pin-input" id="regPinConfirm" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••">
+          <label for="regPasswordConfirm">パスワード（確認用）</label>
+          <input type="password" id="regPasswordConfirm" autocomplete="new-password" autocapitalize="off" spellcheck="false">
         </div>
         <p class="error-text" id="regError"></p>
-        <button class="btn primary" style="width:100%;" onclick="handleRegister()">登録する</button>
+        <button class="btn primary" id="regBtn" style="width:100%;" onclick="handleRegister()">登録する</button>
       </div>
     </div>
   </section>
@@ -497,7 +586,7 @@
       <div class="delta" id="homeHeroDelta"></div>
     </div>
 
-    <div class="section-title">パーク分類別内訳</div>
+    <div class="section-title">パーク別内訳</div>
     <div class="chart-card" id="homeDonutCard"></div>
 
     <div class="section-title">
@@ -591,6 +680,12 @@
       <div class="tabs" id="masterTabs"></div>
       <div id="masterList"></div>
       <button class="add-master-btn" onclick="openMasterItemModal(null)">＋ 新規追加</button>
+    </div>
+
+    <div class="settings-block" id="accountAdminBlock" style="display:none;">
+      <h3>アカウント管理</h3>
+      <p class="hint" style="margin-bottom:4px;">登録している人の権限の変更・パスワードの再設定・削除ができます（管理者のみ表示）。</p>
+      <div id="accountList"></div>
     </div>
 
     <div class="settings-block" id="masterGeneralBlock" style="display:none;">
@@ -696,15 +791,10 @@
       <label>名称<span class="req">必須</span></label>
       <input type="text" id="masterItemName" placeholder="例）東京ディズニーランド">
     </div>
-    <div class="field hidden" id="masterItemCategoryField">
-      <label>分類</label>
-      <input type="text" id="masterItemCategory" list="masterItemCategoryOptions" placeholder="例）陸">
-      <datalist id="masterItemCategoryOptions">
-        <option value="陸">
-        <option value="海">
-        <option value="海外">
-        <option value="その他">
-      </datalist>
+    <div class="field hidden" id="masterItemColorField">
+      <label id="masterItemColorLabel">色</label>
+      <div class="color-swatches" id="masterItemColorSwatches" role="radiogroup" aria-labelledby="masterItemColorLabel"></div>
+      <p class="color-pick-status" id="masterItemColorStatus"></p>
     </div>
     <div class="field hidden" id="masterItemNameEnField">
       <label>英語名（任意）</label>
@@ -719,7 +809,29 @@
     <p class="error-text" id="masterItemError"></p>
     <div class="modal-actions">
       <button class="btn ghost" onclick="closeMasterItemModal()">キャンセル</button>
-      <button class="btn primary" onclick="submitMasterItemForm()">保存</button>
+      <button class="btn primary" id="masterItemSaveBtn" onclick="submitMasterItemForm()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- アカウント管理：パスワードの再設定モーダル（管理者のみ） -->
+<div class="modal-overlay" id="accountPasswordModal">
+  <div class="modal">
+    <h2 id="accountPasswordTitle">パスワードを再設定</h2>
+    <div class="field">
+      <label for="accountNewPassword">新しいパスワード</label>
+      <input type="password" class="input-16" id="accountNewPassword" autocomplete="new-password" autocapitalize="off" spellcheck="false">
+      <p class="field-hint">英数字4文字以上</p>
+    </div>
+    <div class="field">
+      <label for="accountNewPasswordConfirm">新しいパスワード（確認用）</label>
+      <input type="password" class="input-16" id="accountNewPasswordConfirm" autocomplete="new-password" autocapitalize="off" spellcheck="false">
+    </div>
+    <p class="field-hint" id="accountPasswordNote"></p>
+    <p class="error-text" id="accountPasswordError"></p>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeAccountPasswordModal()">キャンセル</button>
+      <button class="btn primary" id="accountPasswordSaveBtn" onclick="submitAccountPassword()">再設定する</button>
     </div>
   </div>
 </div>
@@ -793,6 +905,20 @@
       </label>
       <button class="btn ghost" id="outputCropResetBtn" onclick="resetOutputCrop()">位置をリセット</button>
     </div>
+    <div class="output-year-layout" id="outputYearLayout" style="display:none;">
+      <div class="pos-label">一覧の段組み</div>
+      <div class="output-mode-seg" role="radiogroup" aria-label="一覧の段組み">
+        <button type="button" id="outputCols1Btn" role="radio" aria-checked="false" onclick="setYearLayoutCols(1)">1列</button>
+        <button type="button" id="outputCols2Btn" role="radio" aria-checked="false" onclick="setYearLayoutCols(2)">2列</button>
+      </div>
+      <div class="split-stepper" id="outputSplitRow">
+        <span class="split-label">2列目の始まり</span>
+        <button type="button" class="step-btn" id="outputSplitMinus" aria-label="2列目を1件前から始める" onclick="stepYearSplit(-1)">−</button>
+        <span class="split-value" id="outputSplitValue" aria-live="polite"></span>
+        <button type="button" class="step-btn" id="outputSplitPlus" aria-label="2列目を1件後から始める" onclick="stepYearSplit(1)">＋</button>
+      </div>
+      <p class="layout-note" id="outputLayoutNote"></p>
+    </div>
     <div class="output-text-pos">
       <div class="pos-label">文字の位置</div>
       <div class="pos-chips" id="outputPosChips"></div>
@@ -808,8 +934,19 @@
     <p class="output-bg-note">選んだ画像は端末内で使うだけで、保存・送信はしません。</p>
     <div class="modal-actions">
       <button class="btn ghost" onclick="closeOutputModal()">閉じる</button>
-      <a class="btn primary" id="outputDownloadBtn" style="text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center;">ダウンロード</a>
+      <button type="button" class="btn primary is-pending" id="outputSaveBtn" onclick="saveOutputImage()">ダウンロード</button>
     </div>
+  </div>
+</div>
+
+<!-- 画像の保存（iPhone/iPadで共有シートが使えないとき）：画像を大きく表示し、長押しで「写真」に保存してもらう -->
+<div class="save-overlay" id="saveOverlay" role="dialog" aria-modal="true" aria-labelledby="saveOverlayGuide">
+  <div class="save-overlay-bar">
+    <button type="button" class="save-overlay-close" onclick="closeSaveOverlay()">閉じる</button>
+  </div>
+  <p class="save-overlay-guide" id="saveOverlayGuide">画像を長押しして「"写真"に追加」を選んでください</p>
+  <div class="save-overlay-img-wrap">
+    <img id="saveOverlayImg" alt="保存する画像">
   </div>
 </div>
 
@@ -828,30 +965,50 @@
   // ↓↓↓ GASを「ウェブアプリ」としてデプロイした後に発行されるURL（.../exec）に書き換えること
   const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwTnGBrsE0nJfF9eVNn9fR_c0DRUd_QyhQsVEBnQ3GKCcXOMbtpHW693PnqlXqaPfgS/exec';
 
-  async function apiGet(resource, params){
-    try{
-      const qs = new URLSearchParams(Object.assign({resource}, params||{})).toString();
-      const res = await fetch(SHEET_API_URL + '?' + qs);
-      return await res.json();
-    }catch(e){
-      console.error(e);
-      return { ok:false, error:'通信に失敗しました' };
-    }
-  }
+  /*
+   * 通信（2026-11-12〜 トークン方式）
+   * - データのAPIはすべてPOST（text/plain;charset=utf-8 でJSONを送る。CORSのプリフライトを起こさないため）。GETのAPIは廃止。
+   * - ログイン・新規登録で受け取ったトークンを、Auth.login / Auth.register / Auth.logout 以外のすべての呼び出しに自動で付ける。
+   *   userIdは送らない（サーバーはトークンの持ち主で操作する人を決める）。
+   * - どのAPIでも code==='AUTH_EXPIRED' が返ったら handleAuthExpired() でログイン画面に戻す。
+   *   ログアウト・期限切れのあとに届いた古い応答（authEpochが変わったもの）も AUTH_EXPIRED 扱いにして捨てるので、
+   *   同時に複数の通信が失敗しても案内・画面遷移は1回だけになる。
+   *   呼び出し側は res.code === 'AUTH_EXPIRED' のとき何も表示せずに終える（isAuthLost()）。
+   */
+  const AUTH_FREE_ACTIONS = { login:true, register:true, logout:true };
+  const MSG_NETWORK = '通信に失敗しました。時間をおいてもう一度お試しください';
   async function apiPost(resource, action, payload){
+    const needsToken = !(resource === 'Auth' && AUTH_FREE_ACTIONS[action]);
+    const epoch = state.authEpoch;
+    if(needsToken && !state.authToken){
+      return { ok:false, code:'AUTH_EXPIRED', error:'', stale:true };
+    }
+    let res;
     try{
-      const body = Object.assign({resource, action}, payload||{});
-      const res = await fetch(SHEET_API_URL, {
+      const body = Object.assign({}, payload || {}, { resource: resource, action: action });
+      if(needsToken) body.token = state.authToken;
+      delete body.userId; // 本人はトークンで決まるので送らない
+      const r = await fetch(SHEET_API_URL, {
         method:'POST',
         headers:{ 'Content-Type':'text/plain;charset=utf-8' },
         body: JSON.stringify(body)
       });
-      return await res.json();
+      res = await r.json();
     }catch(e){
       console.error(e);
-      return { ok:false, error:'通信に失敗しました' };
+      res = { ok:false, error: MSG_NETWORK, code:'NETWORK' };
     }
+    if(!res || typeof res !== 'object') res = { ok:false, error: MSG_NETWORK, code:'NETWORK' };
+    if(needsToken){
+      // 送ったあとにログアウト・期限切れ・別の人のログインがあった場合、この応答はもう使わない
+      if(epoch !== state.authEpoch) return { ok:false, code:'AUTH_EXPIRED', error:'', stale:true };
+      if(res.code === 'AUTH_EXPIRED'){ handleAuthExpired(); return res; }
+      if(res.code === 'FORBIDDEN' && (resource === 'Masters' || resource === 'Users')) refreshSessionRole();
+    }
+    return res;
   }
+  /** トークン切れで画面を戻した（またはこれから戻す）応答か。呼び出し側はこのとき何も表示しない。 */
+  function isAuthLost(res){ return !!res && res.code === 'AUTH_EXPIRED'; }
 
   // マスタ・記録データ（ログイン後にサーバーから取得してここに保持する。フィールド名は
   // Code.gsのシート列名にそのまま合わせてある：isActive / seatPosition 等）
@@ -865,52 +1022,127 @@
   // マスタ種別ごとのMasters APIアクション名の接尾辞（create/update/delete + この接尾辞）
   const MASTER_ACTION_SUFFIX = { parks:'Park', passTypes:'PassType', shows:'Show' };
 
-  const CHART_COLORS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)','var(--c8)'];
-
   const TODAY = new Date();
   const CURRENT_YEAR = TODAY.getFullYear();
 
   // セッションはsessionStorageに置く（2026-11-11、ユーザー要望で自動ログインを廃止）。
   // タブ・ブラウザを閉じればログアウトされ、同じタブの再読み込みではsessionStorageの標準の動きでログインが残る。
+  // 中身は { token, user:{id,name,role}, expiresAt }（2026-11-12〜。tokenの無い旧形式 {id,name,role} は起動時に捨てる）。
   // 以前はlocalStorageに保存して次回起動時に自動ログインしていたため、古い端末に残った情報は起動時に削除する。
-  // GAS配信のサンドボックスiframe内ではStorageアクセスが例外を投げることがあるため、必ずtry/catchで囲む。
+  // GAS配信のサンドボックスiframe内ではStorageアクセスが例外を投げることがあるため、必ずtry/catchで囲む
+  // （保存できない環境でも、トークンはメモリ上の state.authToken で持つのでそのタブの中では使い続けられる）。
   const SESSION_KEY = 'inpa-session';
   function purgeLegacySession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){ /* noop */ } }
-  function saveSession(user){ try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(user)); }catch(e){ console.warn('sessionStorage unavailable', e); } }
+  function saveSession(session){ try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); }catch(e){ console.warn('sessionStorage unavailable', e); } }
   function loadSession(){ try{ const raw = sessionStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
   function clearSession(){ try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){ /* noop */ } }
+  function persistSession(){
+    if(!state.authToken || !state.currentUser) return;
+    saveSession({ token: state.authToken, user: state.currentUser, expiresAt: state.authExpiresAt || null });
+  }
+  function normalizeUser(u){
+    return u ? { id: String(u.id), name: String(u.name), role: u.role === 'admin' ? 'admin' : 'member' } : null;
+  }
 
-  /** ログイン中ユーザーのマスタ・記録一覧をまとめて取得する。ログイン成功時・自動ログイン時に呼ぶ。 */
-  async function loadAppData(){
-    const [parksRes, passTypesRes, showsRes, recordsRes] = await Promise.all([
-      apiGet('Masters', {action:'listParks'}),
-      apiGet('Masters', {action:'listPassTypes'}),
-      apiGet('Masters', {action:'listShows'}),
-      apiGet('Records', {action:'list', userId: state.currentUser.id})
-    ]);
-    MASTER_PARKS = parksRes.ok ? parksRes.data : [];
-    MASTER_PASSTYPES = passTypesRes.ok ? passTypesRes.data : [];
-    MASTER_SHOWS = showsRes.ok ? showsRes.data : [];
-    userRecordsCache = recordsRes.ok ? recordsRes.data : [];
-    if(!parksRes.ok || !passTypesRes.ok || !showsRes.ok || !recordsRes.ok){
-      toast('データの取得に一部失敗しました');
+  /** ログイン・新規登録の成功時（{token, expiresAt, user}）に呼ぶ。 */
+  function startSession(data){
+    state.authEpoch++;
+    state.authToken = data.token;
+    state.authExpiresAt = data.expiresAt || null;
+    state.currentUser = normalizeUser(data.user);
+    state.recordsYear = CURRENT_YEAR;
+    state.summaryYearFilter = 'all';
+    persistSession();
+  }
+
+  /**
+   * ログアウト状態に戻す（ログアウト・トークン切れの共通処理）。表示中のモーダルもすべて閉じる。
+   * authEpochを進めるので、この時点で送信中の通信の応答はすべて捨てられる。
+   */
+  function resetToLoggedOut(){
+    state.authEpoch++;
+    state.authToken = null;
+    state.authExpiresAt = null;
+    state.currentUser = null;
+    clearSession();
+    MASTER_PARKS = []; MASTER_PASSTYPES = []; MASTER_SHOWS = []; userRecordsCache = [];
+    state.recordFilters = { parks: [], passTypes: [] }; // 次にログインする人へ絞り込み条件を持ち越さない
+    state.accounts = null; state.accountsError = ''; state.accountBusy = false; state.accountTarget = null;
+    closeAllModals();
+    document.getElementById('loginName').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginPassword').classList.remove('input-error'); // 前回の失敗時の赤枠を残さない
+    document.getElementById('loginError').textContent = '';
+  }
+  function closeAllModals(){
+    if(document.getElementById('outputModal').classList.contains('active')) closeOutputModal();
+    closeSaveOverlay();
+    ['recordModal','masterItemModal','confirmModal','warnModal','accountPasswordModal'].forEach(function(id){
+      document.getElementById(id).classList.remove('active');
+    });
+    state.confirmCallback = null;
+    state.warnCallback = null;
+  }
+  /** どれかのAPIが AUTH_EXPIRED を返したとき。ログアウト状態に戻して案内する（何度呼ばれても1回だけ）。 */
+  function handleAuthExpired(){
+    if(!state.authToken && !state.currentUser) return; // すでにログアウト状態
+    resetToLoggedOut();
+    toast('ログインの有効期限が切れました。もう一度ログインしてください', 3500);
+    navigate('login');
+  }
+  /** 管理者向けの操作が FORBIDDEN になったとき、権限が変わっていないかサーバーに確かめて表示を合わせる。 */
+  let roleCheckPending = false;
+  async function refreshSessionRole(){
+    if(roleCheckPending) return;
+    roleCheckPending = true;
+    try{
+      const res = await apiPost('Auth', 'session', {});
+      if(res.ok && res.data && res.data.user && state.currentUser){
+        const u = normalizeUser(res.data.user);
+        if(u.role !== state.currentUser.role || u.name !== state.currentUser.name){
+          state.currentUser = u;
+          persistSession();
+          if(state.screen === 'settings') refreshSettings();
+          if(state.screen === 'home') refreshHome();
+        }
+      }
+    } finally {
+      roleCheckPending = false;
     }
+  }
+
+  /**
+   * マスタ（Masters.list 1回）と自分の記録（Records.list 1回）をまとめて取得する。ログイン成功時・再読み込み時に呼ぶ。
+   * トークン切れでログイン画面に戻った場合は false を返す（呼び出し側はホームへ進まない）。
+   */
+  async function loadAppData(){
+    const [mastersRes, recordsRes] = await Promise.all([
+      apiPost('Masters', 'list', {}),
+      apiPost('Records', 'list', {})
+    ]);
+    if(isAuthLost(mastersRes) || isAuthLost(recordsRes)) return false;
+    applyMasters(mastersRes);
+    userRecordsCache = recordsRes.ok && Array.isArray(recordsRes.data) ? recordsRes.data : [];
+    if(!mastersRes.ok || !recordsRes.ok){
+      toast(mastersRes.code === 'BUSY' || recordsRes.code === 'BUSY' ? '混み合っているため、データの取得に一部失敗しました' : 'データの取得に一部失敗しました');
+    }
+    return true;
+  }
+  function applyMasters(res){
+    if(!res || !res.ok || !res.data) return false;
+    MASTER_PARKS = Array.isArray(res.data.parks) ? res.data.parks : [];
+    MASTER_PASSTYPES = Array.isArray(res.data.passTypes) ? res.data.passTypes : [];
+    MASTER_SHOWS = Array.isArray(res.data.shows) ? res.data.shows : [];
+    return true;
   }
   /** マスタ一覧のみ再取得する（マスタ管理画面での追加・編集・無効化後に呼ぶ）。 */
   async function reloadMasters(){
-    const [parksRes, passTypesRes, showsRes] = await Promise.all([
-      apiGet('Masters', {action:'listParks'}),
-      apiGet('Masters', {action:'listPassTypes'}),
-      apiGet('Masters', {action:'listShows'})
-    ]);
-    if(parksRes.ok) MASTER_PARKS = parksRes.data;
-    if(passTypesRes.ok) MASTER_PASSTYPES = passTypesRes.data;
-    if(showsRes.ok) MASTER_SHOWS = showsRes.data;
+    applyMasters(await apiPost('Masters', 'list', {}));
   }
   /** ログイン中ユーザーの記録一覧のみ再取得する（記録の追加・編集・削除後に呼ぶ）。 */
   async function reloadRecords(){
-    const res = await apiGet('Records', {action:'list', userId: state.currentUser.id});
-    if(res.ok) userRecordsCache = res.data;
+    const res = await apiPost('Records', 'list', {});
+    if(res.ok && Array.isArray(res.data)) userRecordsCache = res.data;
   }
 
   /* ============================================================
@@ -919,6 +1151,15 @@
   const state = {
     screen: 'login',
     currentUser: null,
+    authToken: null,       // ログイン中のトークン（sessionStorageにも保存。保存できない環境でもメモリ上で使う）
+    authExpiresAt: null,
+    authEpoch: 0,          // ログイン・ログアウト・期限切れのたびに進める。古い通信の応答を捨てるのに使う
+    accounts: null,        // アカウント管理の一覧（管理者のみ）。null＝未取得
+    accountsError: '',
+    accountsLoading: false,
+    accountBusy: false,    // アカウント管理の操作を送信中（全ボタンを無効にして二重送信を防ぐ）
+    accountTarget: null,   // パスワード再設定の対象
+    authBusy: false,       // ログイン・新規登録を送信中
     recordsYear: CURRENT_YEAR,
     summaryYearFilter: 'all',
     editingRecordId: null,
@@ -947,12 +1188,12 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
   }
-  function toast(msg){
+  function toast(msg, ms){
     const el = document.getElementById('toast');
     el.textContent = msg;
     el.classList.add('show');
     clearTimeout(el._t);
-    el._t = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+    el._t = setTimeout(function(){ el.classList.remove('show'); }, ms || 2200);
   }
   function findActive(list){ return list.filter(function(x){ return x.isActive; }); }
   function findById(list, id){ return list.find(function(x){ return x.id === id; }) || null; }
@@ -973,46 +1214,43 @@
     if(!n) return '—';
     return Number(n).toLocaleString('ja-JP') + '円';
   }
-  // ==== 安定配色ロジック（並べ替え機能の追加に備え、マスタの並び順に依存しない固定マッピングにする）====
-  // 「アクティブなマスタ一覧内の並び順（配列インデックス）」で色を決めていた旧実装は、
-  // マスタ管理の並べ替え（▲▼）を行うと既存記録のグラフ配色が変動してしまう問題があったため、
-  // パークは「id文字列のハッシュ」、カテゴリは「よく使う名称の固定テーブル＋未知の名称はハッシュ」で
-  // 固定的に色を決定する。ホームのドーナツ・集計の棒グラフ・一覧の色ドット・画像生成すべてで共通利用する。
-  function hashColorIndex(str){
-    const s = String(str || '');
+  // ==== パークの色（2026-11-12〜：分類「陸・海・海外」ではなくパークごとの色で色分けする）====
+  // 色はParks.color（#RRGGBB）をそのまま使う。並び順に依存しないので、並べ替えても色は変わらない。
+  // PARK_PALETTE は Code.gs の PARK_PALETTE と同じ並び・同じ値にすること（新規パークの初期色・色選択の候補）。
+  // 黄色（#F2C200）は明るい背景で文字にすると読みにくいため、パークの色は点・塗り・グラフの面にだけ使い、
+  // ラベルの文字は通常の文字色にする（点・見本には薄い縁を付けて背景に溶けないようにしている）。
+  const PARK_PALETTE = ['#F2C200','#2F6FDB','#E5484D','#2EAD6B','#8A5CD6','#F08C2E','#14A3A3','#E0569B','#9C6B3F','#6E7889'];
+  const PARK_PALETTE_NAMES = ['黄','青','赤','緑','紫','オレンジ','青緑','ピンク','茶','グレー'];
+  function normalizeHexColor(c){
+    const s = String(c || '').trim();
+    return /^#[0-9A-Fa-f]{6}$/.test(s) ? s.toUpperCase() : '';
+  }
+  /** 色が未設定のパーク用の仮の色（idのハッシュでパレットから選ぶ。表示用のみで保存はしない）。 */
+  function fallbackParkColor(parkId){
+    const s = String(parkId || '');
     let sum = 0;
-    for(let i = 0; i < s.length; i++){ sum += s.charCodeAt(i); }
-    return sum % CHART_COLORS.length;
+    for(let i = 0; i < s.length; i++){ sum = (sum * 31 + s.charCodeAt(i)) % 1000003; }
+    return PARK_PALETTE[sum % PARK_PALETTE.length];
   }
+  /** パークの色。Parks.colorが無い・不正な値のときは仮の色。 */
   function parkColor(parkId){
-    return CHART_COLORS[hashColorIndex(parkId)];
-  }
-  const CATEGORY_FALLBACK = 'その他';
-  function parkCategory(parkId){
     const p = findById(MASTER_PARKS, parkId);
-    return (p && p.category) ? p.category : CATEGORY_FALLBACK;
+    return normalizeHexColor(p && p.color) || fallbackParkColor(parkId);
   }
-  // よく使うカテゴリ名は固定の色インデックス（0始まり、c1〜c8に対応）を割り当てる。
-  // テーブルに無い新規カテゴリ名は、文字列から決定的に算出したハッシュ値でc1〜c8のいずれかに固定する。
-  const CATEGORY_COLOR_INDEX = { '陸':0, '海':2, '海外':1, 'その他':3 };
-  function categoryColor(cat){
-    const name = cat || CATEGORY_FALLBACK;
-    const idx = CATEGORY_COLOR_INDEX.hasOwnProperty(name) ? CATEGORY_COLOR_INDEX[name] : hashColorIndex(name);
-    return CHART_COLORS[idx];
+  function paletteColorName(hex){
+    const i = PARK_PALETTE.indexOf(normalizeHexColor(hex));
+    return i === -1 ? hex : PARK_PALETTE_NAMES[i];
   }
-  // 記録一覧の凡例表示用：よく使う4分類を優先し、残りは出現順で続ける。
-  function legendCategories(){
-    const preferred = ['陸','海','海外','その他'];
-    const present = [];
-    const used = {};
-    userRecords().forEach(function(r){ used[r.parkId] = true; });
-    MASTER_PARKS.filter(function(p){ return p.isActive || used[p.id]; }).forEach(function(p){
-      const cat = p.category || CATEGORY_FALLBACK;
-      if(present.indexOf(cat) === -1) present.push(cat);
-    });
-    const ordered = preferred.filter(function(c){ return present.indexOf(c) !== -1; });
-    present.forEach(function(c){ if(ordered.indexOf(c) === -1) ordered.push(c); });
-    return ordered;
+  /** 凡例・チップ・ドーナツの凡例など、短く出す所のパーク名：略称（abbr）→日本語名。 */
+  function parkShortLabel(parkId){
+    const p = findById(MASTER_PARKS, parkId);
+    if(!p) return parkName(parkId);
+    return String(p.abbr || '').trim() || String(p.name);
+  }
+  /** 並び順の比較用（マスタのsortOrder。マスタに無いパークは最後）。 */
+  function parkSortOrder(parkId){
+    const p = findById(MASTER_PARKS, parkId);
+    return p ? (Number(p.sortOrder) || 0) : 1e9;
   }
   function parkName(parkId){
     const p = findById(MASTER_PARKS, parkId);
@@ -1071,79 +1309,118 @@
   /* ============================================================
    * 4. ログイン・新規登録
    * ============================================================ */
+  // パスワードの条件（Code.gs の PASSWORD_RULE と同じ）。旧「数字4桁」の暗証番号もこの条件を満たすので使い続けられる。
+  const PASSWORD_RULE = /^[A-Za-z0-9]{4,64}$/;
+  const PASSWORD_RULE_MESSAGE = '英数字4文字以上で入力してください';
+  const MSG_LOGIN_FAILED = '名前またはパスワードが違います';
+
   window.openRegisterScreen = function(){
     document.getElementById('regName').value = '';
-    document.getElementById('regPin').value = '';
-    document.getElementById('regPinConfirm').value = '';
+    document.getElementById('regPassword').value = '';
+    document.getElementById('regPasswordConfirm').value = '';
     document.getElementById('regError').textContent = '';
     // ログイン失敗のエラー表示・赤枠を、新規登録→自動ログイン→ログアウト後まで持ち越さない
     document.getElementById('loginError').textContent = '';
-    document.getElementById('loginPin').classList.remove('input-error');
+    document.getElementById('loginPassword').classList.remove('input-error');
     navigate('register');
   };
 
+  /** 日本語入力の確定のEnter（isComposing / keyCode 229）は送信・移動に使わない。 */
+  function isPlainEnter(e){
+    return e.key === 'Enter' && !e.isComposing && e.keyCode !== 229;
+  }
+  window.onLoginNameKey = function(e){
+    if(!isPlainEnter(e)) return;
+    e.preventDefault();
+    document.getElementById('loginPassword').focus();
+  };
+  window.onLoginPasswordKey = function(e){
+    if(!isPlainEnter(e)) return;
+    e.preventDefault();
+    handleLogin();
+  };
+  /** ログイン・登録ボタンの送信中表示（無効にして二重送信を防ぐ）。 */
+  function setAuthBusy(btnId, busy, idleLabel, busyLabel){
+    state.authBusy = busy;
+    const btn = document.getElementById(btnId);
+    btn.disabled = busy;
+    btn.classList.toggle('is-busy', busy);
+    btn.textContent = busy ? busyLabel : idleLabel;
+  }
+
   window.handleLogin = async function(){
+    if(state.authBusy) return;
     const errEl = document.getElementById('loginError');
+    const passEl = document.getElementById('loginPassword');
     const name = document.getElementById('loginName').value.trim(); // 前後の空白は無視（サーバー側でも同じ）
-    const pin = document.getElementById('loginPin').value.trim();
+    const password = passEl.value;
     if(!name){ errEl.textContent = '名前を入力してください'; return; }
-    if(!pin){ errEl.textContent = '暗証番号を入力してください'; return; }
-    const res = await apiPost('Auth', 'login', { name:name, pin:pin });
-    if(!res.ok){
-      // 認証の失敗は、名前とPINのどちらが違うか分からないよう1種類の文言だけを出す（サーバーも同じ文言）。
-      // 通信エラーやGAS側のエラー（ロック待ちの時間切れ等）まで同じ文言にすると「PINを間違えた」と誤解されるため分ける。
-      const isAuthFailure = String(res.error || '').indexOf('名前またはPINが違います') !== -1;
-      if(isAuthFailure){
-        errEl.textContent = '名前またはPINが違います';
-        document.getElementById('loginPin').classList.add('input-error');
-      } else {
-        errEl.textContent = '通信に失敗しました。時間をおいてもう一度お試しください';
-      }
-      return;
-    }
+    if(!password.trim()){ errEl.textContent = 'パスワードを入力してください'; return; }
     errEl.textContent = '';
-    document.getElementById('loginPin').classList.remove('input-error');
-    document.getElementById('loginPin').value = '';
-    state.currentUser = { id: res.data.userId, name: res.data.name, role: res.data.role };
-    saveSession(state.currentUser);
-    state.recordsYear = CURRENT_YEAR;
-    state.summaryYearFilter = 'all';
-    toast(state.currentUser.name + 'さん、ようこそ！');
-    await loadAppData();
-    navigate('home');
+    setAuthBusy('loginBtn', true, 'ログイン', 'ログイン中…');
+    try{
+      const res = await apiPost('Auth', 'login', { name:name, password:password });
+      if(!res.ok || !res.data || !res.data.token){
+        // 認証の失敗は、名前とパスワードのどちらが違うか分からないよう1種類の文言だけを出す（サーバーも同じ）。
+        // 通信エラーや混雑（BUSY）まで同じ文言にすると「パスワードを間違えた」と誤解されるため分ける。
+        if(res.code === 'BAD_CREDENTIALS'){
+          errEl.textContent = MSG_LOGIN_FAILED;
+          passEl.classList.add('input-error');
+        } else if(res.code === 'LOCKED'){
+          errEl.textContent = res.error || MSG_LOGIN_FAILED;
+          passEl.classList.add('input-error');
+        } else if(res.code === 'BUSY' && res.error){
+          errEl.textContent = res.error;
+        } else {
+          errEl.textContent = MSG_NETWORK;
+        }
+        return;
+      }
+      passEl.classList.remove('input-error');
+      passEl.value = '';
+      startSession(res.data);
+      toast(state.currentUser.name + 'さん、ようこそ！');
+      if(await loadAppData()) navigate('home');
+    } finally {
+      setAuthBusy('loginBtn', false, 'ログイン', 'ログイン中…');
+    }
   };
 
   window.handleRegister = async function(){
+    if(state.authBusy) return;
     const errEl = document.getElementById('regError');
     const name = document.getElementById('regName').value.trim();
-    const pin = document.getElementById('regPin').value.trim();
-    const pinConfirm = document.getElementById('regPinConfirm').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirmPw = document.getElementById('regPasswordConfirm').value;
     if(!name){ errEl.textContent = '名前を入力してください'; return; }
-    if(!/^[0-9]{4}$/.test(pin)){ errEl.textContent = '暗証番号は4桁の数字で入力してください'; return; }
-    if(pin !== pinConfirm){ errEl.textContent = '確認用の暗証番号が一致しません'; return; }
-    const res = await apiPost('Auth', 'register', { name:name, pin:pin });
-    if(!res.ok){ errEl.textContent = res.error || '登録に失敗しました'; return; }
+    if(!PASSWORD_RULE.test(password)){ errEl.textContent = PASSWORD_RULE_MESSAGE; return; }
+    if(password !== confirmPw){ errEl.textContent = '確認用のパスワードが一致しません'; return; }
     errEl.textContent = '';
-    // 登録完了と同時に自動ログインする（Design段階の「登録→ログイン画面に戻る」から変更）
-    state.currentUser = { id: res.data.userId, name: res.data.name, role: res.data.role };
-    saveSession(state.currentUser);
-    state.recordsYear = CURRENT_YEAR;
-    state.summaryYearFilter = 'all';
-    toast(state.currentUser.name + 'さんを登録しました');
-    await loadAppData();
-    navigate('home');
+    setAuthBusy('regBtn', true, '登録する', '登録中…');
+    try{
+      const res = await apiPost('Auth', 'register', { name:name, password:password });
+      if(!res.ok || !res.data || !res.data.token){
+        // 名前の重複（NAME_TAKEN）・名前やパスワードの形式（BAD_NAME / BAD_PASSWORD）・混雑（BUSY）はサーバーの文言をそのまま出す
+        errEl.textContent = (res.code && res.code !== 'NETWORK' && res.error) ? res.error : MSG_NETWORK;
+        return;
+      }
+      document.getElementById('regPassword').value = '';
+      document.getElementById('regPasswordConfirm').value = '';
+      // 登録完了と同時に自動ログインする（サーバーがトークンを返す）
+      startSession(res.data);
+      toast(state.currentUser.name + 'さんを登録しました');
+      if(await loadAppData()) navigate('home');
+    } finally {
+      setAuthBusy('regBtn', false, '登録する', '登録中…');
+    }
   };
 
   window.handleLogout = function(){
-    showConfirm('ログアウトしますか？', async function(){
-      state.currentUser = null;
-      clearSession();
-      MASTER_PARKS = []; MASTER_PASSTYPES = []; MASTER_SHOWS = []; userRecordsCache = [];
-      state.recordFilters = { parks: [], passTypes: [] }; // 次にログインする人へ絞り込み条件を持ち越さない
-      document.getElementById('loginName').value = '';
-      document.getElementById('loginPin').value = '';
-      document.getElementById('loginPin').classList.remove('input-error'); // 前回の失敗時の赤枠を残さない
-      document.getElementById('loginError').textContent = '';
+    showConfirm('ログアウトしますか？', function(){
+      // サーバーのトークンを無効にする。送信を始めたら（結果を待たずに・失敗しても）この端末のセッションを消す。
+      const token = state.authToken;
+      if(token) apiPost('Auth', 'logout', { token: token });
+      resetToLoggedOut();
       navigate('login');
     }, 'ログアウト');
   };
@@ -1180,32 +1457,47 @@
       container.innerHTML = '<div class="empty-hint">' + escapeHtml(emptyMsg) + '</div>';
       return;
     }
-    const byCategory = {};
-    records.forEach(function(r){
-      const cat = parkCategory(r.parkId);
-      byCategory[cat] = (byCategory[cat] || 0) + 1;
-    });
+    // パーク別の内訳（2026-11-12〜。以前は分類「陸・海・海外」別）。色はパークの色、並びは多い順・同数はマスタの並び順。
+    const byPark = {};
+    records.forEach(function(r){ byPark[r.parkId] = (byPark[r.parkId] || 0) + 1; });
     const total = records.length;
-    const segments = Object.keys(byCategory).map(function(cat){
-      return { name: cat, value: byCategory[cat], color: categoryColor(cat) };
-    }).sort(function(a,b){ return b.value - a.value; });
+    const segments = Object.keys(byPark).map(function(pid){
+      return { id: pid, name: parkShortLabel(pid), fullName: parkName(pid), value: byPark[pid], color: parkColor(pid) };
+    }).sort(function(a,b){ return (b.value - a.value) || (parkSortOrder(a.id) - parkSortOrder(b.id)); });
 
-    const size = 150, r = 60, cx = 75, cy = 75, circumference = 2 * Math.PI * r, gap = 3;
+    // 塗りは端を角丸にせず（butt）、区切りは背景色の線で入れる。黄色など明るい色が背景に溶けないよう、
+    // 輪の内側・外側にも薄い縁を引く（dataviz方針：塗りの間に背景色の隙間、文字はパークの色にしない）。
+    const size = 150, r = 60, cx = 75, cy = 75, sw = 20, circumference = 2 * Math.PI * r;
     let offsetAcc = 0;
     const circles = segments.map(function(seg){
       const len = (seg.value / total) * circumference;
-      const dash = Math.max(len - gap, 1);
-      const circle = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + seg.color + '" stroke-width="20" ' +
-        'stroke-dasharray="' + dash + ' ' + (circumference - dash) + '" stroke-dashoffset="' + (-offsetAcc) + '" ' +
-        'transform="rotate(-90 ' + cx + ' ' + cy + ')" stroke-linecap="round" style="cursor:pointer" ' +
-        'onclick="toast(\'' + jsAttrEscape(seg.name) + '：' + seg.value + 'イン\')"></circle>';
+      const tip = seg.name + '：' + seg.value + 'イン';
+      const circle = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + seg.color + '" stroke-width="' + sw + '" ' +
+        'stroke-dasharray="' + len + ' ' + (circumference - len) + '" stroke-dashoffset="' + (-offsetAcc) + '" ' +
+        'transform="rotate(-90 ' + cx + ' ' + cy + ')" style="cursor:pointer" ' +
+        'onclick="toast(\'' + jsAttrEscape(tip) + '\')"><title>' + escapeHtml(seg.fullName + '：' + seg.value + 'イン') + '</title></circle>';
       offsetAcc += len;
       return circle;
     }).join('');
+    // 区切り線（2本以上のときだけ）。各区間の始まりの角度に、背景色の線を輪の幅いっぱいに引く
+    let separators = '';
+    if(segments.length > 1){
+      let acc = 0;
+      segments.forEach(function(seg){
+        const a = (acc / total) * Math.PI * 2 - Math.PI / 2;
+        const r0 = r - sw / 2 - 1, r1 = r + sw / 2 + 1;
+        separators += '<line x1="' + (cx + r0 * Math.cos(a)).toFixed(2) + '" y1="' + (cy + r0 * Math.sin(a)).toFixed(2) +
+          '" x2="' + (cx + r1 * Math.cos(a)).toFixed(2) + '" y2="' + (cy + r1 * Math.sin(a)).toFixed(2) +
+          '" stroke="var(--surface-2)" stroke-width="2.5" pointer-events="none"></line>';
+        acc += seg.value;
+      });
+    }
+    const edges = '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r + sw / 2) + '" fill="none" stroke="rgba(20,10,25,0.12)" stroke-width="1" pointer-events="none"></circle>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r - sw / 2) + '" fill="none" stroke="rgba(20,10,25,0.12)" stroke-width="1" pointer-events="none"></circle>';
 
     const legend = segments.map(function(seg){
       const pct = Math.round((seg.value / total) * 100);
-      return '<div class="legend-row" onclick="toast(\'' + jsAttrEscape(seg.name) + '：' + seg.value + 'イン（' + pct + '%）\')">' +
+      return '<div class="legend-row" onclick="toast(\'' + jsAttrEscape(seg.fullName + '：' + seg.value + 'イン（' + pct + '%）') + '\')">' +
         '<span class="legend-swatch" style="background:' + seg.color + '"></span>' +
         '<span class="legend-name">' + escapeHtml(seg.name) + '</span>' +
         '<span class="legend-value">' + seg.value + 'イン（' + pct + '%）</span></div>';
@@ -1214,7 +1506,7 @@
     container.innerHTML =
       '<div class="donut-wrap">' +
         '<div class="donut-svg-wrap">' +
-          '<svg viewBox="0 0 ' + size + ' ' + size + '">' + circles + '</svg>' +
+          '<svg viewBox="0 0 ' + size + ' ' + size + '" role="img" aria-label="パーク別の内訳">' + circles + separators + edges + '</svg>' +
           '<div class="donut-center"><div class="num">' + total + '</div><div class="unit">イン</div></div>' +
         '</div>' +
         '<div class="legend-list">' + legend + '</div>' +
@@ -1266,10 +1558,8 @@
 
   function recordListRowHtml(r){
     const showBadge = r.showId ? '<div class="badge-show">当選：' + escapeHtml(showName(r.showId)) + '</div>' : '';
-    const cat = parkCategory(r.parkId);
-    const dotColor = categoryColor(cat);
     return '<div class="record-card" onclick="openRecordModal(\'' + r.id + '\')">' +
-      '<span class="record-dot" style="background:' + dotColor + '" onclick="event.stopPropagation(); toast(\'' + jsAttrEscape(cat) + '\')"></span>' +
+      '<span class="record-dot" style="background:' + parkColor(r.parkId) + '" onclick="event.stopPropagation(); toast(\'' + jsAttrEscape(parkName(r.parkId)) + '\')"></span>' +
       '<div class="record-info">' +
         '<div class="record-date">' + formatDateShort(r.date) + '</div>' +
         '<div class="record-park">' + escapeHtml(parkName(r.parkId)) + '</div>' +
@@ -1316,7 +1606,7 @@
     parkChipsEl.innerHTML = filterChipItems(MASTER_PARKS, 'parkId', f.parks).map(function(p){
       const on = f.parks.indexOf(p.id) !== -1;
       return '<button type="button" class="chip' + (on ? ' active' : '') + '" onclick="toggleParkFilter(\'' + p.id + '\')">' +
-        '<span class="chip-dot" style="background:' + parkColor(p.id) + '"></span>' + escapeHtml(p.name + (p.isActive ? '' : '（無効）')) + '</button>';
+        '<span class="chip-dot" style="background:' + parkColor(p.id) + '"></span>' + escapeHtml(parkShortLabel(p.id) + (p.isActive ? '' : '（無効）')) + '</button>';
     }).join('') || '<span class="hint">パークが登録されていません</span>';
     passChipsEl.innerHTML = filterChipItems(MASTER_PASSTYPES, 'passTypeId', f.passTypes).map(function(t){
       const on = f.passTypes.indexOf(t.id) !== -1;
@@ -1341,14 +1631,17 @@
     refreshRecords();
   };
 
-  /* ---- 記録一覧：分類の色の凡例（ホームのドーナツと対応関係を明確にする） ---- */
+  /* ---- 記録一覧：パークの色の凡例（一覧のドット・絞り込みチップ・ホームのドーナツと同じ色） ----
+   * 表示中の年の記録に出てくるパークだけを、マスタの並び順で出す。 */
   function renderRecordsLegend(){
     const el = document.getElementById('recordsLegend');
-    const cats = legendCategories();
-    if(cats.length === 0){ el.innerHTML = ''; return; }
-    el.innerHTML = cats.map(function(cat){
-      return '<span class="legend-chip" onclick="toast(\'' + jsAttrEscape(cat) + '\')">' +
-        '<span class="dot" style="background:' + categoryColor(cat) + '"></span>' + escapeHtml(cat) + '</span>';
+    const ids = [];
+    recordsOfYear(state.recordsYear).forEach(function(r){ if(ids.indexOf(r.parkId) === -1) ids.push(r.parkId); });
+    ids.sort(function(a, b){ return parkSortOrder(a) - parkSortOrder(b); });
+    if(ids.length === 0){ el.innerHTML = ''; return; }
+    el.innerHTML = ids.map(function(id){
+      return '<span class="legend-chip" onclick="toast(\'' + jsAttrEscape(parkName(id)) + '\')">' +
+        '<span class="dot" style="background:' + parkColor(id) + '"></span>' + escapeHtml(parkShortLabel(id)) + '</span>';
     }).join('');
   }
 
@@ -1443,10 +1736,11 @@
     let res;
     if(state.editingRecordId){
       item.id = state.editingRecordId;
-      res = await apiPost('Records', 'update', { userId: state.currentUser.id, item:item });
+      res = await apiPost('Records', 'update', { item:item });
     } else {
-      res = await apiPost('Records', 'create', { userId: state.currentUser.id, item:item });
+      res = await apiPost('Records', 'create', { item:item });
     }
+    if(isAuthLost(res)) return;
     if(!res.ok){ errEl.textContent = res.error || '保存に失敗しました'; return; }
 
     closeRecordModal();
@@ -1461,7 +1755,8 @@
     const id = state.editingRecordId;
     if(!id) return;
     showConfirm('この記録を削除しますか？この操作は取り消せません。', async function(){
-      const res = await apiPost('Records', 'delete', { userId: state.currentUser.id, id:id });
+      const res = await apiPost('Records', 'delete', { id:id });
+      if(isAuthLost(res)) return;
       if(!res.ok){ toast(res.error || '削除に失敗しました'); return; }
       closeRecordModal();
       toast('記録を削除しました');
@@ -1558,12 +1853,186 @@
 
     const isAdmin = u.role === 'admin';
     document.getElementById('masterAdminBlock').style.display = isAdmin ? '' : 'none';
+    document.getElementById('accountAdminBlock').style.display = isAdmin ? '' : 'none';
     document.getElementById('masterGeneralBlock').style.display = isAdmin ? 'none' : '';
     if(isAdmin){
       renderMasterTabs();
       renderMasterList();
+      renderAccountList();
+      loadAccounts(); // 設定画面を開くたびに最新の一覧を取り直す
     }
   }
+
+  /* ---- アカウント管理（管理者のみ。Users.list / setRole / resetPassword / delete） ---- */
+  function formatYmdSlash(iso){
+    if(!iso) return '—';
+    const d = new Date(iso);
+    if(isNaN(d.getTime())) return '—';
+    return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
+  }
+  async function loadAccounts(){
+    if(!state.currentUser || state.currentUser.role !== 'admin' || state.accountsLoading) return;
+    state.accountsLoading = true;
+    state.accountsError = '';
+    if(!state.accounts) renderAccountList();
+    try{
+      const res = await apiPost('Users', 'list', {});
+      if(isAuthLost(res)) return;
+      if(res.ok && Array.isArray(res.data)){
+        state.accounts = res.data;
+      } else {
+        state.accountsError = res.error || MSG_NETWORK;
+      }
+    } finally {
+      state.accountsLoading = false;
+    }
+    if(state.screen === 'settings' && state.currentUser && state.currentUser.role === 'admin') renderAccountList();
+  }
+  function findAccount(id){ return (state.accounts || []).find(function(a){ return a.id === id; }) || null; }
+  function renderAccountList(){
+    const el = document.getElementById('accountList');
+    if(!state.currentUser) { el.innerHTML = ''; return; }
+    if(!state.accounts){
+      el.innerHTML = state.accountsError
+        ? '<div class="account-status">' + escapeHtml(state.accountsError) + '<br><button class="link-btn" onclick="loadAccounts()">もう一度読み込む</button></div>'
+        : '<div class="account-status">読み込み中…</div>';
+      return;
+    }
+    const me = state.currentUser.id;
+    const busy = state.accountBusy;
+    let html = state.accounts.map(function(a){
+      const isMe = a.id === me;
+      const isAdmin = a.role === 'admin';
+      const dis = busy ? ' disabled' : '';
+      // 自分の行：降格（管理者→一般）と削除はできない
+      const roleBtn = isAdmin
+        ? '<button type="button" class="account-btn" onclick="changeAccountRole(\'' + a.id + '\',\'member\')"' + (busy || isMe ? ' disabled' : '') + '>一般にする</button>'
+        : '<button type="button" class="account-btn" onclick="changeAccountRole(\'' + a.id + '\',\'admin\')"' + dis + '>管理者にする</button>';
+      return '<div class="account-item">' +
+        '<div class="account-head">' +
+          '<div class="account-avatar" aria-hidden="true">' + escapeHtml(String(a.name).slice(0, 1)) + '</div>' +
+          '<div class="account-main">' +
+            '<div class="account-name-line">' +
+              '<span class="account-name">' + escapeHtml(a.name) + '</span>' +
+              (isMe ? '<span class="account-self">あなた</span>' : '') +
+              '<span class="role-badge ' + (isAdmin ? 'admin' : 'general') + '">' + (isAdmin ? '管理者' : '一般') + '</span>' +
+            '</div>' +
+            '<div class="account-meta">登録 ' + formatYmdSlash(a.createdAt) + '　・　記録 ' + (Number(a.recordCount) || 0) + '件</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="account-actions">' +
+          roleBtn +
+          '<button type="button" class="account-btn" onclick="openAccountPasswordModal(\'' + a.id + '\')"' + dis + '>パスワード<br>再設定</button>' +
+          '<button type="button" class="account-btn danger" onclick="deleteAccount(\'' + a.id + '\')"' + (busy || isMe ? ' disabled' : '') + '>削除</button>' +
+        '</div>' +
+        (isMe ? '<p class="account-self-note">自分の権限の変更（降格）と削除はできません。</p>' : '') +
+      '</div>';
+    }).join('');
+    if(!html) html = '<div class="account-status">アカウントがありません</div>';
+    if(state.accountsError) html += '<div class="account-status">' + escapeHtml(state.accountsError) + '</div>';
+    el.innerHTML = html;
+  }
+  /** アカウント操作を送る共通処理。送信中は全ボタンを無効にし、終わったら一覧を取り直す。 */
+  async function runAccountAction(action, payload, onOk){
+    if(state.accountBusy) return null;
+    state.accountBusy = true;
+    renderAccountList();
+    let res;
+    try{
+      res = await apiPost('Users', action, payload);
+    } finally {
+      state.accountBusy = false;
+    }
+    if(isAuthLost(res)) return res;
+    if(res.ok){ if(onOk) onOk(res); }
+    else toast(res.error || '処理に失敗しました', 3500);
+    renderAccountList();
+    await loadAccounts();
+    return res;
+  }
+  window.changeAccountRole = function(id, role){
+    const a = findAccount(id);
+    if(!a || state.accountBusy) return;
+    const msg = role === 'admin'
+      ? a.name + 'さんを管理者にしますか？管理者はマスタ管理・アカウント管理ができるようになります。'
+      : a.name + 'さんを一般ユーザーにしますか？マスタ管理・アカウント管理ができなくなります。';
+    showConfirm(msg, function(){
+      runAccountAction('setRole', { id:id, role:role }, function(){
+        toast(a.name + 'さんを' + (role === 'admin' ? '管理者' : '一般ユーザー') + 'にしました');
+      });
+    }, role === 'admin' ? '管理者にする' : '一般にする', 'primary');
+  };
+  window.deleteAccount = function(id){
+    const a = findAccount(id);
+    if(!a || state.accountBusy || a.id === state.currentUser.id) return;
+    const n = Number(a.recordCount) || 0;
+    showConfirm(a.name + 'さんのアカウントを削除します。記録' + n + '件も削除されます。元に戻せません。', function(){
+      runAccountAction('delete', { id:id }, function(res){
+        const d = res.data && res.data.deletedRecords !== undefined ? Number(res.data.deletedRecords) : n;
+        toast(a.name + 'さんのアカウントを削除しました（記録' + d + '件）', 3000);
+      });
+    }, '削除する');
+  };
+  window.openAccountPasswordModal = function(id){
+    const a = findAccount(id);
+    if(!a || state.accountBusy) return;
+    state.accountTarget = { id: a.id, name: String(a.name) };
+    const isMe = a.id === state.currentUser.id;
+    document.getElementById('accountPasswordTitle').textContent = a.name + 'さんのパスワードを再設定';
+    document.getElementById('accountPasswordNote').textContent = isMe
+      ? '自分のパスワードを変えても、この端末はログインしたままです（ほかの端末はログアウトされます）。'
+      : '再設定すると、' + a.name + 'さんがログイン中の端末はログアウトされます。新しいパスワードは本人に伝えてください。';
+    document.getElementById('accountNewPassword').value = '';
+    document.getElementById('accountNewPasswordConfirm').value = '';
+    document.getElementById('accountPasswordError').textContent = '';
+    setAccountPasswordBusy(false);
+    document.getElementById('accountPasswordModal').classList.add('active');
+  };
+  window.closeAccountPasswordModal = function(){
+    document.getElementById('accountPasswordModal').classList.remove('active');
+    document.getElementById('accountNewPassword').value = '';
+    document.getElementById('accountNewPasswordConfirm').value = '';
+    state.accountTarget = null;
+  };
+  function setAccountPasswordBusy(busy){
+    const btn = document.getElementById('accountPasswordSaveBtn');
+    btn.disabled = busy;
+    btn.classList.toggle('is-busy', busy);
+    btn.textContent = busy ? '送信中…' : '再設定する';
+  }
+  window.submitAccountPassword = async function(){
+    const t = state.accountTarget;
+    if(!t || state.accountBusy) return;
+    const errEl = document.getElementById('accountPasswordError');
+    const pw = document.getElementById('accountNewPassword').value;
+    const pw2 = document.getElementById('accountNewPasswordConfirm').value;
+    if(!PASSWORD_RULE.test(pw)){ errEl.textContent = PASSWORD_RULE_MESSAGE; return; }
+    if(pw !== pw2){ errEl.textContent = '確認用のパスワードが一致しません'; return; }
+    errEl.textContent = '';
+    setAccountPasswordBusy(true);
+    state.accountBusy = true;
+    renderAccountList();
+    let res;
+    try{
+      res = await apiPost('Users', 'resetPassword', { id: t.id, password: pw });
+    } finally {
+      state.accountBusy = false;
+      setAccountPasswordBusy(false);
+    }
+    if(isAuthLost(res)) return;
+    if(!res.ok){
+      errEl.textContent = res.error || '再設定に失敗しました';
+      renderAccountList();
+      return;
+    }
+    const isMe = state.currentUser && t.id === state.currentUser.id;
+    closeAccountPasswordModal();
+    toast(isMe
+      ? '自分のパスワードを再設定しました'
+      : t.name + 'さんのパスワードを再設定しました。ログイン中の端末はログアウトされます', 4000);
+    renderAccountList();
+    loadAccounts();
+  };
 
   function renderMasterTabs(){
     const tabsEl = document.getElementById('masterTabs');
@@ -1614,7 +2083,10 @@
             '<button class="reorder-btn" aria-label="下へ" onclick="moveMasterItem(\'' + item.id + '\',1)"' + downDisabled + '>▼</button>' +
           '</div>' +
           '<div class="master-item-text">' +
-            '<span class="name' + (item.isActive ? '' : ' inactive') + '">' + escapeHtml(item.name) + '</span>' +
+            (state.masterTab === 'parks'
+              ? '<span class="name-wrap"><span class="park-color-dot" style="background:' + parkColor(item.id) + '" title="' + escapeHtml(paletteColorName(parkColor(item.id))) + '"></span>' +
+                '<span class="name' + (item.isActive ? '' : ' inactive') + '">' + escapeHtml(item.name) + '</span></span>'
+              : '<span class="name' + (item.isActive ? '' : ' inactive') + '">' + escapeHtml(item.name) + '</span>') +
             statusBadge +
             nameEnHtml +
           '</div>' +
@@ -1648,7 +2120,7 @@
     MASTER_MAP[tab]().sort(function(a,b){ return (a.sortOrder||0) - (b.sortOrder||0); });
     renderMasterList();
 
-    const payload = { userId: state.currentUser.id, id:itemId, direction: dir < 0 ? 'up' : 'down' };
+    const payload = { id:itemId, direction: dir < 0 ? 'up' : 'down' };
     const action = 'reorder' + MASTER_ACTION_SUFFIX[tab];
     reorderPending++;
     reorderQueue = reorderQueue.then(async function(){
@@ -1656,7 +2128,7 @@
         const res = await apiPost('Masters', action, payload);
         if(!res.ok){
           reorderFailed = true;
-          toast(res.error || '並べ替えに失敗しました');
+          if(!isAuthLost(res)) toast(res.error || '並べ替えに失敗しました');
         }
       }
       reorderPending--;
@@ -1675,51 +2147,114 @@
     const list = MASTER_MAP[state.masterTab]();
     const label = MASTER_LABELS[state.masterTab];
     const isParks = state.masterTab === 'parks';
-    document.getElementById('masterItemCategoryField').classList.toggle('hidden', !isParks);
+    // 分類（category）の入力欄は2026-11-12に廃止（色分けをパークごとの色にしたため）。送らなければサーバー側の値はそのまま残る。
+    document.getElementById('masterItemColorField').classList.toggle('hidden', !isParks);
     document.getElementById('masterItemNameEnField').classList.toggle('hidden', !isParks);
     document.getElementById('masterItemAbbrField').classList.toggle('hidden', !isParks);
     if(itemId){
       const item = findById(list, itemId);
       document.getElementById('masterItemModalTitle').textContent = label + 'を編集';
       document.getElementById('masterItemName').value = item.name;
-      document.getElementById('masterItemCategory').value = isParks ? (item.category || '') : '';
       document.getElementById('masterItemNameEn').value = isParks ? (item.nameEn || '') : '';
       document.getElementById('masterItemAbbr').value = isParks ? (item.abbr || '') : '';
+      // 色が未設定のパークは、表示に使っている仮の色を初期選択にする（保存すると正式に設定される）
+      state.masterColor = isParks ? parkColor(item.id) : null;
     } else {
       document.getElementById('masterItemModalTitle').textContent = label + 'を追加';
       document.getElementById('masterItemName').value = '';
-      document.getElementById('masterItemCategory').value = '';
       document.getElementById('masterItemNameEn').value = '';
       document.getElementById('masterItemAbbr').value = '';
+      state.masterColor = isParks ? firstUnusedParkColor() : null;
     }
+    if(isParks) renderColorSwatches();
+    setMasterSaveBusy(false);
     document.getElementById('masterItemModal').classList.add('active');
   };
   window.closeMasterItemModal = function(){ document.getElementById('masterItemModal').classList.remove('active'); };
 
+  /** パレットのうち、まだどのパークにも使われていない最初の色（全部使われていれば先頭から巡回）。Code.gsのnextUnusedParkColorと同じ考え方。 */
+  function firstUnusedParkColor(){
+    const used = MASTER_PARKS.map(function(p){ return normalizeHexColor(p.color); });
+    const free = PARK_PALETTE.find(function(c){ return used.indexOf(c) === -1; });
+    return free || PARK_PALETTE[used.length % PARK_PALETTE.length];
+  }
+  /** 色見本が明るい（黄色など）ときはチェックを濃い色にする。 */
+  function isLightColor(hex){
+    const h = normalizeHexColor(hex);
+    if(!h) return false;
+    const r = parseInt(h.slice(1,3),16), g = parseInt(h.slice(3,5),16), b = parseInt(h.slice(5,7),16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 170;
+  }
+  /** パーク追加・編集モーダルの色見本（パレット10色）。他のパークで使っている色には小さな印を付ける。 */
+  function renderColorSwatches(){
+    const el = document.getElementById('masterItemColorSwatches');
+    const editingId = state.editingMasterId;
+    const usedBy = {};
+    MASTER_PARKS.forEach(function(p){
+      if(p.id === editingId) return;
+      const c = parkColor(p.id);
+      (usedBy[c] = usedBy[c] || []).push(parkShortLabel(p.id));
+    });
+    const sel = normalizeHexColor(state.masterColor);
+    el.innerHTML = PARK_PALETTE.map(function(c, i){
+      const on = c === sel;
+      const used = usedBy[c];
+      const label = PARK_PALETTE_NAMES[i] + (used ? '（' + used.join('・') + 'で使用中）' : '');
+      const check = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + (isLightColor(c) ? '#241c33' : '#ffffff') +
+        '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      return '<button type="button" class="color-swatch' + (on ? ' on' : '') + '" role="radio" aria-checked="' + on + '"' +
+        ' aria-label="' + escapeHtml(label) + '" title="' + escapeHtml(label) + '" style="background:' + c + '" onclick="pickMasterColor(\'' + c + '\')">' +
+        check + (used ? '<span class="used-mark" aria-hidden="true"></span>' : '') + '</button>';
+    }).join('');
+    const used = usedBy[sel];
+    document.getElementById('masterItemColorStatus').textContent = sel
+      ? '選択中：' + paletteColorName(sel) + (used ? '（' + used.join('・') + 'と同じ色です）' : '') + '　○印は他のパークで使用中の色'
+      : '';
+  }
+  window.pickMasterColor = function(c){
+    state.masterColor = c;
+    renderColorSwatches();
+  };
+  function setMasterSaveBusy(busy){
+    const btn = document.getElementById('masterItemSaveBtn');
+    btn.disabled = busy;
+    btn.classList.toggle('is-busy', busy);
+  }
+
   window.submitMasterItemForm = async function(){
     const errEl = document.getElementById('masterItemError');
+    const saveBtn = document.getElementById('masterItemSaveBtn');
+    if(saveBtn.disabled) return;
     const name = document.getElementById('masterItemName').value.trim();
     if(!name){ errEl.textContent = '名称を入力してください'; return; }
     const actionSuffix = MASTER_ACTION_SUFFIX[state.masterTab];
+    const editingId = state.editingMasterId;
     const item = { name:name };
     if(state.masterTab === 'parks'){
-      item.category = document.getElementById('masterItemCategory').value.trim();
       item.nameEn = document.getElementById('masterItemNameEn').value.trim();
       item.abbr = document.getElementById('masterItemAbbr').value.trim();
+      const c = normalizeHexColor(state.masterColor);
+      if(c) item.color = c;
     }
     let res;
-    if(state.editingMasterId){
-      item.id = state.editingMasterId;
-      res = await apiPost('Masters', 'update' + actionSuffix, { userId: state.currentUser.id, item:item });
-    } else {
-      res = await apiPost('Masters', 'create' + actionSuffix, { userId: state.currentUser.id, item:item });
+    setMasterSaveBusy(true);
+    try{
+      if(editingId){
+        item.id = editingId;
+        res = await apiPost('Masters', 'update' + actionSuffix, { item:item });
+      } else {
+        res = await apiPost('Masters', 'create' + actionSuffix, { item:item });
+      }
+    } finally {
+      setMasterSaveBusy(false);
     }
+    if(isAuthLost(res)) return;
     if(!res.ok){ errEl.textContent = res.error || '保存に失敗しました'; return; }
     errEl.textContent = '';
-    toast(state.editingMasterId ? '更新しました' : '追加しました');
+    toast(editingId ? '更新しました' : '追加しました');
     closeMasterItemModal();
     await reloadMasters();
-    renderMasterList();
+    if(state.screen === 'settings') renderMasterList();
   };
 
   window.toggleMasterItemActive = async function(itemId){
@@ -1728,7 +2263,8 @@
     const actionSuffix = MASTER_ACTION_SUFFIX[state.masterTab];
     if(item.isActive){
       showConfirm('「' + item.name + '」を無効化しますか？無効化した項目は記録の新規登録時に選べなくなります（既存の記録には影響しません）。', async function(){
-        const res = await apiPost('Masters', 'delete' + actionSuffix, { userId: state.currentUser.id, id:itemId });
+        const res = await apiPost('Masters', 'delete' + actionSuffix, { id:itemId });
+        if(isAuthLost(res)) return;
         if(!res.ok){ toast(res.error || '処理に失敗しました'); return; }
         await reloadMasters();
         renderMasterList();
@@ -1736,7 +2272,8 @@
         toast(res.data && res.data.physicallyDeleted ? '削除しました' : '無効にしました');
       }, '無効にする');
     } else {
-      const res = await apiPost('Masters', 'update' + actionSuffix, { userId: state.currentUser.id, item:{ id:itemId, isActive:true } });
+      const res = await apiPost('Masters', 'update' + actionSuffix, { item:{ id:itemId, isActive:true } });
+      if(isAuthLost(res)) return;
       if(!res.ok){ toast(res.error || '処理に失敗しました'); return; }
       await reloadMasters();
       renderMasterList();
@@ -1748,7 +2285,7 @@
    * 9. 画像生成（単発記録カード・年間まとめ）— Instagramストーリー用 1080x1920
    * ============================================================
    * 2026-11 デザイン刷新:
-   *  - アプリ名（いんぱ手帳）・金額は画像に載せない。パーク名は英語名（Parks.nameEn、空なら日本語名）。
+   *  - アプリ名（D-COUNT。旧称いんぱ手帳）・金額は画像に載せない。パーク名は英語名（Parks.nameEn、空なら日本語名）。
    *  - 背景は「標準背景（夜空風グラデーション）」または「ユーザーが選んだローカル画像」。
    *    ローカル画像はFileReader相当（URL.createObjectURL）で読み込み、canvas上で9:16の枠に切り抜く。
    *    切り抜く範囲（位置・拡大率）はプレビュー上のドラッグ／ピンチ／ホイール／スライダーで調整できる
@@ -1772,8 +2309,6 @@
   function imgMuted(photo){ return photo ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.52)'; }
   const IMG_ACCENT = '#ff8fab';  // ブランドのコーラルピンク（暗い背景上で映えるダークモード側の値）
   const IMG_GOLD = '#f5c36b';    // 当選ショー用（アプリのゴールドを暗背景向けに少し明るく）
-  // カテゴリ色（categoryColor()が返す--c1〜--c8の番号）を、暗い背景・写真の上でも沈まない明るめの値に置き換える
-  const IMG_DOT_COLORS = ['#6aa8f5','#f5864f','#38cf97','#f5bd3a','#f297bb','#4cc35e','#aaa0f7','#f38181'];
   const WEEKDAY_EN = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
   let imageFontsPromise = null;
@@ -1806,9 +2341,26 @@
     return imageFontsPromise;
   }
 
-  function imageCategoryColor(cat){
-    const m = /--c(\d)/.exec(categoryColor(cat));
-    return IMG_DOT_COLORS[m ? Number(m[1]) - 1 : 0];
+  /**
+   * 画像（暗い背景・写真の上）に打つパークの色の点。パークの色をそのまま使うが、暗い色（青・紫・茶・グレー等）は
+   * 背景に沈まないよう、相対輝度が IMG_DOT_MIN_LUM 以上になるまで白を少しずつ混ぜて明るくする（最大45%）。
+   * 黄・オレンジなど元から明るい色は変えない。
+   */
+  const IMG_DOT_MIN_LUM = 0.26;
+  function relLuminance(r, g, b){
+    function ch(v){ v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+  }
+  function imageParkColor(parkId){
+    const hex = parkColor(parkId);
+    const r0 = parseInt(hex.slice(1,3),16), g0 = parseInt(hex.slice(3,5),16), b0 = parseInt(hex.slice(5,7),16);
+    for(let t = 0; t <= 0.45 + 1e-9; t += 0.05){
+      const r = Math.round(r0 + (255 - r0) * t), g = Math.round(g0 + (255 - g0) * t), b = Math.round(b0 + (255 - b0) * t);
+      if(relLuminance(r, g, b) >= IMG_DOT_MIN_LUM || t >= 0.45 - 1e-9){
+        return '#' + [r, g, b].map(function(v){ return v.toString(16).padStart(2, '0'); }).join('');
+      }
+    }
+    return hex;
   }
   /** 画像用のパーク表示名：英語名（nameEn）を優先し、空なら日本語名で代用する。 */
   function parkImageName(parkId){
@@ -2166,12 +2718,12 @@
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
 
-      // 1) メタ行：カテゴリ色の小さなドット＋日付＋曜日
+      // 1) メタ行：パークの色の小さなドット＋日付＋曜日
       let y = P + 30;
       const mx0 = P + alignX(align, CW, metaW);
       ctx.beginPath();
       ctx.arc(mx0 + 9, y - 11, 9, 0, Math.PI * 2);
-      ctx.fillStyle = imageCategoryColor(parkCategory(r.parkId));
+      ctx.fillStyle = imageParkColor(r.parkId);
       ctx.fill();
       imgFont(ctx, 500, 32, IMG_SANS);
       ctx.fillStyle = imgSoft(photo);
@@ -2213,16 +2765,91 @@
   }
 
   /**
-   * 年間まとめ画像の段組み・文字サイズ。件数に応じて段階的に切り替える。
-   *  - 〜6件: 1列・特大 / 〜10件: 1列・大 / 〜16件: 1列・中
-   *  - 17〜24件: 2列・中 / 25件〜: 2列・小（行高は残り高さから自動算出。40件程度まで破綻しない）
+   * 年間まとめ画像の段組み（自動判定）。〜16件は1列、17件〜は2列（2列目は半分＋1件目から）。
+   * 2026-11-12から、画像出力モーダルで「1列／2列」と「2列目を何件目から始めるか」を選べる（resolveYearLayout）。
    */
   function summaryLayoutTier(n){
-    if(n <= 6)  return { cols:1, yearSize:210, rowH:132, nameSize:54, dateSize:34, weekday:true };
-    if(n <= 10) return { cols:1, yearSize:180, rowH:110, nameSize:48, dateSize:32, weekday:true };
-    if(n <= 16) return { cols:1, yearSize:150, rowH:80,  nameSize:40, dateSize:29, weekday:true };
-    if(n <= 24) return { cols:2, yearSize:140, rowH:90,  nameSize:32, dateSize:25, weekday:false };
-    return            { cols:2, yearSize:122, rowH:72,  nameSize:29, dateSize:23, weekday:false };
+    return yearTierFor(n <= 16 ? 1 : 2, n <= 16 ? n : Math.ceil(n / 2));
+  }
+  /**
+   * 文字サイズの基準。段組みと「多い方の列の行数」で段階的に切り替える
+   * （自動判定のときは従来と同じ：〜6件 1列特大／〜10件 大／〜16件 中／17〜24件 2列中／25件〜 2列小）。
+   * 実際の行の高さ・文字サイズは yearSummaryMetrics() で残りの高さから計算し、入らなければ自動で小さくする。
+   */
+  function yearTierFor(cols, rows){
+    if(cols === 1){
+      if(rows <= 6)  return { cols:1, yearSize:210, rowH:132, nameSize:54, dateSize:34, weekday:true };
+      if(rows <= 10) return { cols:1, yearSize:180, rowH:110, nameSize:48, dateSize:32, weekday:true };
+      return                { cols:1, yearSize:150, rowH:80,  nameSize:40, dateSize:29, weekday:true };
+    }
+    if(rows <= 12) return { cols:2, yearSize:140, rowH:90, nameSize:32, dateSize:25, weekday:false };
+    return                { cols:2, yearSize:122, rowH:72, nameSize:29, dateSize:23, weekday:false };
+  }
+  function defaultYearSplit(n){ return Math.ceil(n / 2) + 1; }
+  /**
+   * 段組みの指定 { cols:1|2|null(自動), split:2列目が始まる件数（1始まり）|null(半分) } を、件数 n に合わせて確定する。
+   * 戻り値の leftN / rightN は左右の列の件数、rows は多い方の列の件数（＝行数）。
+   */
+  function resolveYearLayout(n, layout){
+    let cols = layout && (layout.cols === 1 || layout.cols === 2) ? layout.cols : summaryLayoutTier(n).cols;
+    if(n < 2) cols = 1;
+    if(cols === 1) return { cols:1, split:null, leftN:n, rightN:0, rows:n };
+    let split = layout && layout.split ? Math.round(layout.split) : defaultYearSplit(n);
+    split = Math.min(n, Math.max(2, split));
+    const leftN = split - 1, rightN = n - leftN;
+    return { cols:2, split:split, leftN:leftN, rightN:rightN, rows: Math.max(leftN, rightN) };
+  }
+  // 一覧のパーク名の文字がこれより小さくなる段組みは「読めない」とみなし、選べないようにする（出力1080px幅で約20px）
+  const SUMMARY_MIN_NAME_SIZE = 20;
+  /** 年間まとめの寸法（見出しの高さ・行の高さ・文字サイズ）。文字ブロックの組み立てと、段組みが収まるかの判定で共用。 */
+  function yearSummaryMetrics(year, layout){
+    const m = measureCtx();
+    const H = STORY_H;
+    const records = recordsOfYear(year).slice().sort(function(a, b){
+      return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
+    });
+    const n = records.length;
+    const L = resolveYearLayout(n, layout);
+    const t = yearTierFor(L.cols, L.rows);
+    const rows = L.rows;
+    const X = L.cols === 1 ? 118 : 92;
+    const contentW = STORY_W - X * 2;
+    // 見出し（年＋件数＋パーク別合計）の高さ
+    // Cormorant Garamondの数字はオールドスタイル（3,4,5,7,9が下に突き出る）なので、ディセンダ分の余白を取る
+    const yearCap = Math.round(t.yearSize * 0.70);
+    const yearDesc = Math.round(t.yearSize * 0.24);
+    const countTop = yearCap + yearDesc + 24;           // 件数行（高さ34）の上端
+    const totals = layoutParkTotals(m, parkTotals(records), contentW);
+    const totalsTop = countTop + 34 + 22;                // パーク別合計の上端
+    const headerH = totalsTop + totals.h + 48;           // 一覧の上端
+    const safeH = H - STORY_SAFE * 2;
+    const listMax = safeH - headerH - 20;
+    // 行の高さは「多い方の列の行数」で残りの高さを割って決め、文字は行の高さの6割までに収める（入らなければ自動で小さくなる）
+    const rowH = Math.min(t.rowH, Math.floor(listMax / Math.max(rows, 1)));
+    const nameSize = Math.max(8, Math.min(t.nameSize, Math.floor(rowH * 0.6)));
+    const dateSize = Math.max(7, Math.round(t.dateSize * nameSize / t.nameSize));
+    return {
+      records: records, n: n, layout: L, t: t, rows: rows, X: X, contentW: contentW,
+      yearCap: yearCap, countTop: countTop, totals: totals, totalsTop: totalsTop, headerH: headerH, safeH: safeH,
+      rowH: rowH, nameSize: nameSize, dateSize: dateSize, tooSmall: n > 0 && nameSize < SUMMARY_MIN_NAME_SIZE
+    };
+  }
+  /**
+   * 画像出力モーダルの段組みの選択肢。1列が読める大きさに収まるか、2列目の始まりとして選べる範囲（読める大きさに収まる範囲）。
+   * どれも収まらない（件数が極端に多い）ときは範囲を制限せず、注意だけ出す。
+   */
+  function yearLayoutOptions(year){
+    const n = recordsOfYear(year).length;
+    const opt = { n: n, oneFits: true, twoPossible: n >= 2, splitMin: 2, splitMax: Math.max(2, n), splitLimited: false, anyTwoFits: true };
+    if(n < 2) return opt;
+    opt.oneFits = !yearSummaryMetrics(year, { cols:1 }).tooSmall;
+    let lo = null, hi = null;
+    for(let s = 2; s <= n; s++){
+      if(!yearSummaryMetrics(year, { cols:2, split:s }).tooSmall){ if(lo === null) lo = s; hi = s; }
+    }
+    if(lo === null){ opt.anyTwoFits = false; }
+    else if(lo > 2 || hi < n){ opt.splitMin = lo; opt.splitMax = hi; opt.splitLimited = true; }
+    return opt;
   }
 
   /** パーク別合計の表示名：略称（abbr）→英語名（nameEn）→日本語名の順に、空でないものを使う。 */
@@ -2241,7 +2868,7 @@
     });
     function so(id){ const p = findById(MASTER_PARKS, id); return p ? (Number(p.sortOrder) || 0) : 1e9; }
     return order.map(function(id){
-      return { id: id, label: parkTotalLabel(id), count: counts[id], color: imageCategoryColor(parkCategory(id)) };
+      return { id: id, label: parkTotalLabel(id), count: counts[id], color: imageParkColor(id) };
     }).sort(function(a, b){
       return (b.count - a.count) || (so(a.id) - so(b.id)) || (a.id < b.id ? -1 : (a.id > b.id ? 1 : 0));
     });
@@ -2293,35 +2920,15 @@
   }
 
   /** 年間まとめの文字ブロック：年・件数・パーク別合計・対象年の全記録（日付昇順「日付＋パーク名（英語）」の一覧）。 */
-  function buildYearTextBlock(year, photo, align){
+  function buildYearTextBlock(year, photo, align, layout){
     const m = measureCtx();
-    const W = STORY_W, H = STORY_H;
-    const records = recordsOfYear(year).slice().sort(function(a, b){
-      return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
-    });
-    const n = records.length;
-    const t = summaryLayoutTier(n);
-    const rows = Math.ceil(n / t.cols);
-
-    const X = t.cols === 1 ? 118 : 92;
-    const contentW = W - X * 2;
+    const M = yearSummaryMetrics(year, layout);
+    const records = M.records, n = M.n, t = M.t, rows = M.rows, L = M.layout;
+    const X = M.X, contentW = M.contentW;
     const gutter = 64;
     const colW = t.cols === 1 ? contentW : (contentW - gutter) / 2;
-
-    // 見出し（年＋件数＋パーク別合計）の高さ
-    // Cormorant Garamondの数字はオールドスタイル（3,4,5,7,9が下に突き出る）なので、ディセンダ分の余白を取る
-    const yearCap = Math.round(t.yearSize * 0.70);
-    const yearDesc = Math.round(t.yearSize * 0.24);
-    const countTop = yearCap + yearDesc + 24;           // 件数行（高さ34）の上端
-    const totals = layoutParkTotals(m, parkTotals(records), contentW);
-    const totalsTop = countTop + 34 + 22;                // パーク別合計の上端
-    const headerH = totalsTop + totals.h + 48;           // 一覧の上端
-    const safeH = H - STORY_SAFE * 2;
-    const listMax = safeH - headerH - 20;
-    const rowH = Math.min(t.rowH, Math.floor(listMax / Math.max(rows, 1)));
-    const k = rowH / t.rowH; // 行高を詰めた分だけ文字も縮める
-    const nameSize = Math.round(t.nameSize * Math.max(k, 0.82));
-    const dateSize = Math.round(t.dateSize * Math.max(k, 0.82));
+    const yearCap = M.yearCap, countTop = M.countTop, totals = M.totals, totalsTop = M.totalsTop;
+    const headerH = M.headerH, safeH = M.safeH, rowH = M.rowH, nameSize = M.nameSize, dateSize = M.dateSize;
     const ch = headerH + rowH * rows;
 
     // 一覧の寸法
@@ -2381,7 +2988,7 @@
       ctx.fillStyle = imgSoft(photo);
       drawSpaced(ctx, countLabel, cx0 + 58, countY, 7);
 
-      // 3) パーク別合計（● TDL 18　● TDS 14 …）。ドットは一覧と同じ分類色。
+      // 3) パーク別合計（● TDL 18　● TDS 14 …）。ドットは一覧と同じパークの色。
       totals.lines.forEach(function(line, li){
         let lx = P + alignX(align, CW, line.w);
         const base = Math.round(P + totalsTop + li * totals.lineH + totals.lineH / 2 + totals.size * 0.35);
@@ -2407,8 +3014,9 @@
       const listTop = P + headerH;
       const lx0 = P + alignX(align, CW, listW);
       entries.forEach(function(e, i){
-        const col = t.cols === 1 ? 0 : Math.floor(i / rows); // 列優先（左列を上から下へ→右列）で日付順に読めるようにする
-        const row = t.cols === 1 ? i : i % rows;
+        // 列優先（左列を上から下へ→右列）で日付順に読めるようにする。2列目は L.split 件目（leftN+1件目）から
+        const col = t.cols === 1 || i < L.leftN ? 0 : 1;
+        const row = col === 0 ? i : i - L.leftN;
         const x = lx0 + col * (colW + gutter);
         const rowTop = listTop + row * rowH;
         const base = Math.round(rowTop + rowH / 2 + nameSize * 0.34);
@@ -2423,7 +3031,7 @@
         const dp = dateParts(e.r.date);
         ctx.beginPath();
         ctx.arc(x + dotR, base - dateSize * 0.36, dotR, 0, Math.PI * 2);
-        ctx.fillStyle = imageCategoryColor(parkCategory(e.r.parkId));
+        ctx.fillStyle = imageParkColor(e.r.parkId);
         ctx.fill();
 
         imgFont(ctx, 500, dateSize, IMG_SANS);
@@ -2443,8 +3051,8 @@
     return block;
   }
 
-  function buildTextBlock(kind, subject, photo, align){
-    return kind === 'record' ? buildRecordTextBlock(subject, photo, align) : buildYearTextBlock(subject, photo, align);
+  function buildTextBlock(kind, subject, photo, align, layout){
+    return kind === 'record' ? buildRecordTextBlock(subject, photo, align) : buildYearTextBlock(subject, photo, align, layout);
   }
 
   /** 写真背景の暗幕。年間まとめは文字量が多いので全体を均一に暗くする（配置によらず同じ）。
@@ -2467,11 +3075,11 @@
   /**
    * 画像を組み立てる（出力PNG用。プレビューも同じ部品＝背景・暗幕・文字ブロック・textBlockRect を使う）。
    * bg: null（標準背景）または { image, crop }。overlayOnly=true なら写真を描かない。
-   * pos: 文字の配置（省略時は標準＝従来の配置）。
+   * pos: 文字の配置（省略時は標準＝従来の配置）。layout: 年間まとめの段組み（省略時は自動。resolveYearLayout参照）。
    */
-  function composeStoryImage(kind, subject, bg, overlayOnly, pos){
+  function composeStoryImage(kind, subject, bg, overlayOnly, pos, layout){
     const photo = !!bg;
-    const block = buildTextBlock(kind, subject, photo, textAlignOf(pos));
+    const block = buildTextBlock(kind, subject, photo, textAlignOf(pos), layout);
     const rect = textBlockRect(block, pos);
     const canvas = newStoryCanvas();
     const ctx = canvas.getContext('2d');
@@ -2480,7 +3088,7 @@
     return canvas;
   }
   function composeRecordCardImage(r, bg, overlayOnly, pos){ return composeStoryImage('record', r, bg, overlayOnly, pos); }
-  function composeYearSummaryImage(year, bg, overlayOnly, pos){ return composeStoryImage('year', year, bg, overlayOnly, pos); }
+  function composeYearSummaryImage(year, bg, overlayOnly, pos, layout){ return composeStoryImage('year', year, bg, overlayOnly, pos, layout); }
 
   /* ---- 背景画像（ローカル読み込みのみ。サーバーへは送らない） ---- */
 
@@ -2577,23 +3185,117 @@
     baseKey:'',              // 中間レイヤー（標準背景／暗幕）を最後に描いたときの条件
     renderSeq:0,             // プレビューの描き直し世代
     exportSeq:0,             // ダウンロード用PNGの作成世代（位置を動かすたびに古い作成結果を捨てる）
-    downloadUrl:null, session:0,
+    downloadUrl:null, pngBlob:null, session:0,
     exportTimer:null, bgRaf:0, textRaf:0, bgDragging:false,
-    pointers: new Map(), stageBound:false
+    pointers: new Map(), stageBound:false,
+    yearLayout:{ cols:null, split:null }, // 年間まとめの段組み（null＝自動）。モーダルを開くたびに自動に戻す
+    yearLayoutOpts:null,                  // 段組みの選択肢（yearLayoutOptions の結果。フォント読み込み後に計算）
+    shareBlocked:false,                   // 共有（navigator.share）が使えないと分かった（NotAllowedError等）
+    saving:false
   };
 
-  function setDownloadReady(url){
-    const a = document.getElementById('outputDownloadBtn');
+  /**
+   * 保存用のPNGができた（blob）／作り直し中（null）。作成中・操作中は保存ボタンを押せない。
+   */
+  function setDownloadReady(blob){
+    const btn = document.getElementById('outputSaveBtn');
     if(outputState.downloadUrl){ URL.revokeObjectURL(outputState.downloadUrl); outputState.downloadUrl = null; }
-    if(url){
-      outputState.downloadUrl = url;
-      a.href = url; a.download = outputState.filename;
-      a.classList.remove('is-pending');
+    outputState.pngBlob = blob || null;
+    if(blob){
+      outputState.downloadUrl = URL.createObjectURL(blob);
+      btn.classList.remove('is-pending');
+      btn.disabled = false;
     } else {
-      a.removeAttribute('href');
-      a.classList.add('is-pending');
+      btn.classList.add('is-pending');
+      btn.disabled = true;
     }
+    updateSaveButtonLabel();
   }
+
+  /* ---- 画像の保存（iPhoneで「写真」に入れられるようにする、2026-11-12） ----
+   * 次の順に試す：
+   *  1. 共有シート：navigator.canShare({files:[PNG]}) が真なら navigator.share({files}) を呼ぶ（共有シートの「画像を保存」で写真に入る）。
+   *     ユーザーが閉じた AbortError は何もしない。NotAllowedError など他の失敗は、以後この画面では共有を使わずに2・3へ。
+   *     GAS配信版はiframeの中で動くため共有できないことが多い（canShareが偽、またはshare()がNotAllowedError）。
+   *  2. iPhone/iPad（iPadOSのデスクトップ表示＝Macintosh＋タッチも含む）：画像を全画面に大きく表示し、長押しで「"写真"に追加」してもらう。
+   *  3. それ以外（PC等）：これまでどおりダウンロード。
+   */
+  function isIOSDevice(){
+    const ua = navigator.userAgent || '';
+    if(/iPhone|iPad|iPod/.test(ua)) return true;
+    // iPadOS 13以降のSafariは既定でMacと同じUA（デスクトップ表示）。タッチ点があればiPadとみなす
+    return /Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1;
+  }
+  function canShareFiles(file){
+    if(outputState.shareBlocked) return false;
+    try{
+      if(!navigator.share || !navigator.canShare) return false;
+      const f = file || new File([new Blob([''], { type:'image/png' })], 'probe.png', { type:'image/png' });
+      return !!navigator.canShare({ files:[f] });
+    }catch(e){ return false; }
+  }
+  function saveMethod(){
+    if(canShareFiles()) return 'share';
+    return isIOSDevice() ? 'overlay' : 'download';
+  }
+  function updateSaveButtonLabel(){
+    const btn = document.getElementById('outputSaveBtn');
+    if(!btn) return;
+    const method = saveMethod();
+    btn.textContent = method === 'share' ? '保存・共有' : (method === 'overlay' ? '画像を表示して保存' : 'ダウンロード');
+  }
+  window.saveOutputImage = async function(){
+    const blob = outputState.pngBlob;
+    if(!blob || outputState.saving || document.getElementById('outputSaveBtn').disabled) return;
+    const file = new File([blob], outputState.filename || 'image.png', { type:'image/png' });
+    if(canShareFiles(file)){
+      outputState.saving = true;
+      try{
+        // ボタンを押した直後（ユーザー操作の中）に呼ぶ必要があるので、この前に await を挟まない
+        await navigator.share({ files:[file] });
+        return;
+      }catch(e){
+        if(e && e.name === 'AbortError') return; // 共有シートを閉じただけ
+        console.warn('share failed', e);
+        outputState.shareBlocked = true;          // 以後は2・3の方法にする
+        updateSaveButtonLabel();
+      }finally{
+        outputState.saving = false;
+      }
+    }
+    if(isIOSDevice()){ openSaveOverlay(blob); return; }
+    downloadBlob(outputState.downloadUrl, outputState.filename);
+  };
+  function downloadBlob(url, filename){
+    if(!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'image.png';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  /** iPhone/iPad用：画像を大きく表示する。長押しの保存メニューが確実に出るよう、srcはdata URLにする。 */
+  let saveOverlaySeq = 0;
+  function openSaveOverlay(blob){
+    const seq = ++saveOverlaySeq;
+    const overlay = document.getElementById('saveOverlay');
+    const img = document.getElementById('saveOverlayImg');
+    img.removeAttribute('src');
+    overlay.classList.add('active');
+    const reader = new FileReader();
+    reader.onload = function(){ if(seq === saveOverlaySeq) img.src = String(reader.result); };
+    reader.onerror = function(){ if(seq === saveOverlaySeq && outputState.downloadUrl) img.src = outputState.downloadUrl; };
+    reader.readAsDataURL(blob);
+  }
+  window.closeSaveOverlay = function(){
+    saveOverlaySeq++;
+    const overlay = document.getElementById('saveOverlay');
+    if(!overlay) return;
+    overlay.classList.remove('active');
+    document.getElementById('saveOverlayImg').removeAttribute('src');
+  };
   /** 実際に有効な操作対象（背景画像が無いときは常に「文字」）。 */
   function activeEditMode(){
     return outputState.editMode === 'bg' && outputState.bgImage ? 'bg' : 'text';
@@ -2684,17 +3386,105 @@
   function currentTextBlock(){
     const photo = !!outputState.bgImage;
     const align = textAlignOf(outputState.textPos);
-    const key = outputState.session + '|' + outputState.kind + '|' + photo + '|' + align;
+    const layout = currentYearLayoutSpec();
+    const key = outputState.session + '|' + outputState.kind + '|' + photo + '|' + align + '|' + (layout ? layout.cols + ':' + layout.split : '');
     if(!outputState.textBlock || outputState.textBlockKey !== key){
-      outputState.textBlock = buildTextBlock(outputState.kind, outputSubject(), photo, align);
+      outputState.textBlock = buildTextBlock(outputState.kind, outputSubject(), photo, align, layout);
       outputState.textBlockKey = key;
     }
     return outputState.textBlock;
   }
   function currentTextRect(){ return textBlockRect(currentTextBlock(), outputState.textPos); }
   function composeOutput(bg, overlayOnly){
-    return composeStoryImage(outputState.kind, outputSubject(), bg, overlayOnly, outputState.textPos);
+    return composeStoryImage(outputState.kind, outputSubject(), bg, overlayOnly, outputState.textPos, currentYearLayoutSpec());
   }
+
+  /* ---- 年間まとめの段組み（1列／2列・2列目の始まり）。年間まとめのときだけ表示する ---- */
+  /** 今の段組みの指定を確定した形 { cols, split }（年間まとめ以外は null）。 */
+  function currentYearLayoutSpec(){
+    if(outputState.kind !== 'year') return null;
+    const n = recordsOfYear(outputState.year).length;
+    const L = resolveYearLayout(n, outputState.yearLayout);
+    return { cols: L.cols, split: L.split };
+  }
+  function syncYearLayoutUI(){
+    const wrap = document.getElementById('outputYearLayout');
+    const n = outputState.kind === 'year' ? recordsOfYear(outputState.year).length : 0;
+    if(outputState.kind !== 'year' || n < 2){ wrap.style.display = 'none'; return; }
+    wrap.style.display = '';
+    const spec = currentYearLayoutSpec();
+    const opt = outputState.yearLayoutOpts;
+    const ready = !!outputState.textBlock && !!opt;
+    const b1 = document.getElementById('outputCols1Btn'), b2 = document.getElementById('outputCols2Btn');
+    b1.classList.toggle('on', spec.cols === 1); b1.setAttribute('aria-checked', String(spec.cols === 1));
+    b2.classList.toggle('on', spec.cols === 2); b2.setAttribute('aria-checked', String(spec.cols === 2));
+    // 1列が読めないほど小さくなる場合は、2列が収まる限り1列を選べなくする
+    b1.disabled = !ready || (spec.cols !== 1 && opt && !opt.oneFits && opt.anyTwoFits);
+    b2.disabled = !ready || n < 2;
+    const row = document.getElementById('outputSplitRow');
+    row.style.display = spec.cols === 2 ? '' : 'none';
+    const note = document.getElementById('outputLayoutNote');
+    let msg = '', warn = false;
+    if(spec.cols === 2){
+      const lo = opt ? opt.splitMin : 2, hi = opt ? opt.splitMax : n;
+      document.getElementById('outputSplitValue').textContent = spec.split + '件目から';
+      document.getElementById('outputSplitMinus').disabled = !ready || spec.split <= lo;
+      document.getElementById('outputSplitPlus').disabled = !ready || spec.split >= hi;
+      msg = '左の列 ' + (spec.split - 1) + '件・右の列 ' + (n - spec.split + 1) + '件';
+      if(opt && opt.splitLimited) msg += '（文字が小さくなりすぎないよう、' + lo + '〜' + hi + '件目の範囲で選べます）';
+    } else if(opt && !opt.oneFits){
+      msg = '件数が多いため、1列では文字がかなり小さくなります。2列をおすすめします';
+      warn = true;
+    } else if(opt && opt.oneFits && n > 16){
+      msg = '件数が多いので、文字を小さくして1列に収めています';
+    }
+    if(spec.cols === 2 && opt && !opt.anyTwoFits){
+      msg = '件数が多いため、文字がかなり小さくなります';
+      warn = true;
+    }
+    note.textContent = msg;
+    note.classList.toggle('warn', warn);
+  }
+  /** 段組みが変わったとき：文字ブロックを組み直し（大きさが変わる）、自由配置なら位置・倍率を新しい大きさで制限し直してから描き直す。 */
+  function onYearLayoutChanged(){
+    if(!outputState.textBlock) return;
+    invalidateExport();
+    outputState.textBlock = null;
+    if(outputState.textPos.preset === 'free'){
+      const fr = clampTextRect(outputState.textPos, currentTextBlock());
+      setFreeTextRect(fr);
+    }
+    drawOutputTextLayer();
+    drawOutputBaseLayer(false);
+    syncTextUI();
+    syncYearLayoutUI();
+    scheduleExport(0);
+  }
+  window.setYearLayoutCols = function(cols){
+    if(outputState.kind !== 'year' || !outputState.textBlock) return;
+    const cur = currentYearLayoutSpec();
+    if(cur.cols === cols) return;
+    const opt = outputState.yearLayoutOpts;
+    outputState.yearLayout = { cols: cols, split: null };
+    if(cols === 2 && opt){
+      // 既定は半分。収まる範囲が限られていれば、その中に寄せる
+      const n = opt.n;
+      const s = Math.min(opt.splitMax, Math.max(opt.splitMin, defaultYearSplit(n)));
+      outputState.yearLayout.split = s;
+    }
+    onYearLayoutChanged();
+  };
+  window.stepYearSplit = function(delta){
+    if(outputState.kind !== 'year' || !outputState.textBlock) return;
+    const cur = currentYearLayoutSpec();
+    if(cur.cols !== 2) return;
+    const opt = outputState.yearLayoutOpts;
+    const lo = opt ? opt.splitMin : 2, hi = opt ? opt.splitMax : recordsOfYear(outputState.year).length;
+    const next = Math.min(hi, Math.max(lo, cur.split + delta));
+    if(next === cur.split) return;
+    outputState.yearLayout = { cols:2, split: next };
+    onYearLayoutChanged();
+  };
 
   /** 背景レイヤー（写真のみ）をプレビューの表示サイズで描く。位置調整中は画質を落として軽くする。 */
   function drawOutputBgLayer(){
@@ -2772,7 +3562,7 @@
     const canvas = composeOutput(currentOutputBg(), false);
     canvas.toBlob(function(blob){
       if(seq !== outputState.exportSeq || !blob) return;
-      setDownloadReady(URL.createObjectURL(blob));
+      setDownloadReady(blob);
     }, 'image/png');
   }
   function cancelExport(){
@@ -2824,10 +3614,13 @@
       const fr = clampTextRect(outputState.textPos, currentTextBlock());
       outputState.textPos.x = fr.x; outputState.textPos.y = fr.y; outputState.textPos.s = fr.s;
     }
+    // 段組みの選択肢（1列が収まるか・2列目の始まりの範囲）はフォントが読めてから一度だけ計算する
+    if(outputState.kind === 'year' && !outputState.yearLayoutOpts) outputState.yearLayoutOpts = yearLayoutOptions(outputState.year);
     drawOutputBaseLayer(true);
     drawOutputTextLayer();
     syncTextUI();
     syncEditModeUI();
+    syncYearLayoutUI();
     if(bg) drawOutputBgLayer();
     exportOutputPng();
   }
@@ -3054,6 +3847,11 @@
     outputState.session++;
     resetOutputBgState(); // 前回の背景画像は持ち越さない（閉じた後に読み込みが終わった場合も含む）
     resetOutputTextState();
+    outputState.yearLayout = { cols:null, split:null }; // 段組みは毎回「自動」から始める
+    outputState.yearLayoutOpts = null;
+    closeSaveOverlay();
+    setDownloadReady(null);
+    syncYearLayoutUI();
     renderPosChips();
     syncPosChips();
     document.getElementById('outputCropHint').classList.remove('is-faded');
@@ -3072,6 +3870,8 @@
     bindOutputStage(false);
     resetOutputBgState(); // 背景画像はその場限り。閉じたら破棄する
     resetOutputTextState();
+    outputState.yearLayoutOpts = null;
+    closeSaveOverlay();
     setDownloadReady(null);
   };
   window.onOutputBgSelected = async function(input){
@@ -3140,9 +3940,12 @@
   /* ============================================================
    * 10. 汎用確認モーダル
    * ============================================================ */
-  function showConfirm(message, onYes, yesLabel){
+  // tone: 省略時は削除確認と同じ赤系。'primary' は取り消せる操作（権限の変更など）用のブランド色のボタン。
+  function showConfirm(message, onYes, yesLabel, tone){
     document.getElementById('confirmModalMessage').textContent = message;
-    document.getElementById('confirmModalYesBtn').textContent = yesLabel || '実行する';
+    const yesBtn = document.getElementById('confirmModalYesBtn');
+    yesBtn.textContent = yesLabel || '実行する';
+    yesBtn.classList.toggle('confirm-primary', tone === 'primary');
     state.confirmCallback = onYes;
     document.getElementById('confirmModal').classList.add('active');
   }
@@ -3181,15 +3984,30 @@
    * ============================================================ */
   document.addEventListener('DOMContentLoaded', async function(){
     purgeLegacySession(); // 旧版（localStorageでの自動ログイン）が残した情報を消す
+    updateSaveButtonLabel();
     const session = loadSession(); // 同じタブの再読み込みのときだけ残っている
-    if(session && session.id){
-      state.currentUser = session;
-      state.recordsYear = CURRENT_YEAR;
-      await loadAppData();
-      navigate('home');
-    } else {
+    if(!session || !session.token || !session.user){
+      // トークンの無い旧形式（{id,name,role}だけ）や壊れた値は捨ててログイン画面へ
+      if(session) clearSession();
       navigate('login');
+      return;
     }
+    // 保存してあるトークンがまだ使えるかをサーバーに確かめ、最新の権限（role）でホームへ
+    state.authEpoch++;
+    state.authToken = String(session.token);
+    state.authExpiresAt = session.expiresAt || null;
+    const res = await apiPost('Auth', 'session', {});
+    if(isAuthLost(res)) return; // 期限切れ：handleAuthExpired() がログイン画面に戻して案内済み
+    if(!res.ok || !res.data || !res.data.user){
+      resetToLoggedOut();
+      toast(res.code === 'BUSY' && res.error ? res.error : 'ログイン状態を確認できませんでした。もう一度ログインしてください', 3500);
+      navigate('login');
+      return;
+    }
+    state.currentUser = normalizeUser(res.data.user);
+    state.recordsYear = CURRENT_YEAR;
+    persistSession();
+    if(await loadAppData()) navigate('home');
   });
 </script>
 </body>
