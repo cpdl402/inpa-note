@@ -490,7 +490,7 @@
 
     <div class="chart-card">
       <h3>年間まとめ画像</h3>
-      <div class="chart-sub">選択中の年の合計・内訳・金額を1枚の画像にまとめます</div>
+      <div class="chart-sub">選択中の年の記録を日付順に一覧にした画像を作ります（金額は載りません）</div>
       <button class="btn primary btn-icon" onclick="generateYearSummaryImage()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
         年間まとめ画像を作る
@@ -885,7 +885,9 @@
   function legendCategories(){
     const preferred = ['陸','海','海外','その他'];
     const present = [];
-    findActive(MASTER_PARKS).forEach(function(p){
+    const used = {};
+    userRecords().forEach(function(r){ used[r.parkId] = true; });
+    MASTER_PARKS.filter(function(p){ return p.isActive || used[p.id]; }).forEach(function(p){
       const cat = p.category || CATEGORY_FALLBACK;
       if(present.indexOf(cat) === -1) present.push(cat);
     });
@@ -1016,6 +1018,7 @@
       state.currentUser = null;
       clearSession();
       MASTER_PARKS = []; MASTER_PASSTYPES = []; MASTER_SHOWS = []; userRecordsCache = [];
+      state.recordFilters = { parks: [], passTypes: [] }; // 次にログインする人へ絞り込み条件を持ち越さない
       await loadLoginUsers();
       navigate('login');
     }, 'ログアウト');
@@ -1172,17 +1175,28 @@
       btn.classList.remove('on');
     }
   }
+  // 絞り込みチップに出すマスタ：有効な項目に加え、無効化済みでも自分の記録が参照している項目
+  // （その記録を絞り込めなくなるのを防ぐ）と、現在選択中の項目（解除できなくなるのを防ぐ）。
+  function filterChipItems(list, field, selected){
+    const used = {};
+    userRecords().forEach(function(r){ used[r[field]] = true; });
+    return list.filter(function(x){ return x.isActive || used[x.id] || selected.indexOf(x.id) !== -1; });
+  }
   function renderFilterPanel(){
+    const f = state.recordFilters;
+    // マスタから消えた（物理削除された）項目の選択は、チップが出ず解除できないため取り除く
+    f.parks = f.parks.filter(function(id){ return !!findById(MASTER_PARKS, id); });
+    f.passTypes = f.passTypes.filter(function(id){ return !!findById(MASTER_PASSTYPES, id); });
     const parkChipsEl = document.getElementById('filterParkChips');
     const passChipsEl = document.getElementById('filterPassTypeChips');
-    parkChipsEl.innerHTML = findActive(MASTER_PARKS).map(function(p){
-      const on = state.recordFilters.parks.indexOf(p.id) !== -1;
+    parkChipsEl.innerHTML = filterChipItems(MASTER_PARKS, 'parkId', f.parks).map(function(p){
+      const on = f.parks.indexOf(p.id) !== -1;
       return '<button type="button" class="chip' + (on ? ' active' : '') + '" onclick="toggleParkFilter(\'' + p.id + '\')">' +
-        '<span class="chip-dot" style="background:' + parkColor(p.id) + '"></span>' + escapeHtml(p.name) + '</button>';
+        '<span class="chip-dot" style="background:' + parkColor(p.id) + '"></span>' + escapeHtml(p.name + (p.isActive ? '' : '（無効）')) + '</button>';
     }).join('') || '<span class="hint">パークが登録されていません</span>';
-    passChipsEl.innerHTML = findActive(MASTER_PASSTYPES).map(function(t){
-      const on = state.recordFilters.passTypes.indexOf(t.id) !== -1;
-      return '<button type="button" class="chip' + (on ? ' active' : '') + '" onclick="togglePassTypeFilter(\'' + t.id + '\')">' + escapeHtml(t.name) + '</button>';
+    passChipsEl.innerHTML = filterChipItems(MASTER_PASSTYPES, 'passTypeId', f.passTypes).map(function(t){
+      const on = f.passTypes.indexOf(t.id) !== -1;
+      return '<button type="button" class="chip' + (on ? ' active' : '') + '" onclick="togglePassTypeFilter(\'' + t.id + '\')">' + escapeHtml(t.name + (t.isActive ? '' : '（無効）')) + '</button>';
     }).join('') || '<span class="hint">パスポート種別が登録されていません</span>';
     updateFilterCountBadge();
   }
@@ -1214,24 +1228,28 @@
     }).join('');
   }
 
-  function populateSelectOptions(selectEl, list, placeholder){
+  // keepId: 編集中の記録が参照している項目のid。無効化済みでも選択肢に残し（「（無効）」付き）、
+  // 無効化されたマスタを使った既存記録を、その項目を変えずに編集・保存できるようにする。
+  function populateSelectOptions(selectEl, list, placeholder, keepId){
     let html = '';
     if(placeholder !== undefined) html += '<option value="">' + escapeHtml(placeholder) + '</option>';
-    html += findActive(list).map(function(item){
-      return '<option value="' + item.id + '">' + escapeHtml(item.name) + '</option>';
+    html += list.filter(function(item){ return item.isActive || (keepId && item.id === keepId); }).map(function(item){
+      return '<option value="' + item.id + '">' + escapeHtml(item.name + (item.isActive ? '' : '（無効）')) + '</option>';
     }).join('');
     selectEl.innerHTML = html;
   }
 
   window.openRecordModal = function(recordId){
+    const editing = recordId ? findById(userRecords(), recordId) : null;
+    if(recordId && !editing){ toast('記録が見つかりませんでした'); return; }
     state.editingRecordId = recordId;
     document.getElementById('recordError').textContent = '';
-    populateSelectOptions(document.getElementById('rPark'), MASTER_PARKS);
-    populateSelectOptions(document.getElementById('rPassType'), MASTER_PASSTYPES);
-    populateSelectOptions(document.getElementById('rShow'), MASTER_SHOWS, 'なし');
+    populateSelectOptions(document.getElementById('rPark'), MASTER_PARKS, undefined, editing && editing.parkId);
+    populateSelectOptions(document.getElementById('rPassType'), MASTER_PASSTYPES, undefined, editing && editing.passTypeId);
+    populateSelectOptions(document.getElementById('rShow'), MASTER_SHOWS, 'なし', editing && editing.showId);
 
     if(recordId){
-      const r = findById(userRecords(), recordId);
+      const r = editing;
       document.getElementById('recordModalTitle').textContent = '記録を編集';
       document.getElementById('rDate').value = r.date;
       document.getElementById('rPark').value = r.parkId;
@@ -1482,29 +1500,46 @@
     }).join('');
   }
 
-  // 隣接項目とsortOrderを交換して並び順を変更する。見た目はローカルの配列操作で即時反映し
-  // （楽観的更新）、その後サーバーへ永続化する。サーバー側が拒否した場合は交換をもう一度
-  // 適用して元の状態にロールバックする（入れ替えは2回適用すると元に戻る）。
-  window.moveMasterItem = async function(itemId, dir){
+  // 隣接項目と入れ替えて並び順を変更する。見た目はローカルで即時反映し（楽観的更新）、その後サーバーへ永続化する。
+  // - ローカルもサーバー（Code.gs reorderMasterItem）と同じ規則「入れ替え→全項目を1からの連番に振り直す」で更新する
+  //   （sortOrderの重複・空がある既存データでも確実に並びが変わるようにするため）。
+  // - ▲▼を連打しても、サーバーへの送信はクリック順に1件ずつ直列化する（並行送信だと到着順が入れ替わり、
+  //   画面とシートの並びが食い違うことがあるため）。
+  // - 1件でも失敗したら残りの送信は取りやめ、最後にサーバーの状態を読み直して画面を正に戻す。
+  let reorderQueue = Promise.resolve();
+  let reorderPending = 0;
+  let reorderFailed = false;
+  window.moveMasterItem = function(itemId, dir){
+    const tab = state.masterTab;
     const list = sortedMasterList();
     const idx = list.findIndex(function(x){ return x.id === itemId; });
     const targetIdx = idx + dir;
     if(idx === -1 || targetIdx < 0 || targetIdx >= list.length) return;
-    const a = list[idx], b = list[targetIdx];
-    function swap(){
-      const tmp = a.sortOrder;
-      a.sortOrder = b.sortOrder;
-      b.sortOrder = tmp;
-    }
-    swap();
+    const tmp = list[idx]; list[idx] = list[targetIdx]; list[targetIdx] = tmp;
+    list.forEach(function(x, i){ x.sortOrder = i + 1; });
+    // マスタ配列自体も並べ直し、記録フォームのプルダウンや絞り込みチップの順序にも即時反映する
+    MASTER_MAP[tab]().sort(function(a,b){ return (a.sortOrder||0) - (b.sortOrder||0); });
     renderMasterList();
-    const actionSuffix = MASTER_ACTION_SUFFIX[state.masterTab];
-    const res = await apiPost('Masters', 'reorder' + actionSuffix, { userId: state.currentUser.id, id:itemId, direction: dir < 0 ? 'up' : 'down' });
-    if(!res.ok){
-      swap();
-      renderMasterList();
-      toast(res.error || '並べ替えに失敗しました');
-    }
+
+    const payload = { userId: state.currentUser.id, id:itemId, direction: dir < 0 ? 'up' : 'down' };
+    const action = 'reorder' + MASTER_ACTION_SUFFIX[tab];
+    reorderPending++;
+    reorderQueue = reorderQueue.then(async function(){
+      if(!reorderFailed){
+        const res = await apiPost('Masters', action, payload);
+        if(!res.ok){
+          reorderFailed = true;
+          toast(res.error || '並べ替えに失敗しました');
+        }
+      }
+      reorderPending--;
+      if(reorderPending === 0 && reorderFailed){
+        reorderFailed = false;
+        await reloadMasters();
+        if(state.screen === 'settings') renderMasterList();
+      }
+    });
+    return reorderQueue;
   };
 
   window.openMasterItemModal = function(itemId){
@@ -1680,21 +1715,6 @@
     }
     return s;
   }
-  /** 単語単位で折り返す（空白を含まない日本語名などは文字単位で折り返す）。 */
-  function wrapLines(ctx, text, maxW){
-    const hasSpace = /\s/.test(text);
-    const tokens = hasSpace ? text.split(/\s+/) : Array.from(text);
-    const joiner = hasSpace ? ' ' : '';
-    const lines = [];
-    let cur = '';
-    tokens.forEach(function(tok){
-      const next = cur ? cur + joiner + tok : tok;
-      if(cur && ctx.measureText(next).width > maxW){ lines.push(cur); cur = tok; }
-      else { cur = next; }
-    });
-    if(cur) lines.push(cur);
-    return lines;
-  }
   function seededRandom(seed){
     let s = seed % 2147483647; if(s <= 0) s += 2147483646;
     return function(){ s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
@@ -1798,26 +1818,12 @@
     const X = 108, maxW = W - X * 2;
     const dp = dateParts(r.date);
 
-    // パーク名：英語名（空白区切り）は単語単位で最大2行まで、収まる最大サイズを探す（150px→84px）。
-    // 空白を含まない日本語名は語の途中で改行すると不格好なため、まず1行に収まるまで縮小（→64px）し、
-    // それでも入らない極端に長い名称のときだけ文字単位で2行に折り返す。最後の手段として2行目を省略。
+    // パーク名：必ず1行（ユーザー確定 2026-11-11）。1行に収まるまで150px→56pxの範囲で縮小し、
+    // 下限でも入らない長い名称は末尾を「…」で省略する（年間まとめの一覧と同じ考え方）。
     const nameText = parkImageName(r.parkId);
-    const nameHasSpace = /\s/.test(nameText);
-    let nameSize = 150, nameLines;
-    while(true){
-      imgFont(ctx, 600, nameSize, IMG_SERIF);
-      if(nameHasSpace){
-        nameLines = wrapLines(ctx, nameText, maxW);
-      } else {
-        nameLines = ctx.measureText(nameText).width <= maxW || nameSize > 64 ? [nameText] : wrapLines(ctx, nameText, maxW);
-      }
-      const fits = nameLines.length <= 2 && nameLines.every(function(l){ return ctx.measureText(l).width <= maxW; });
-      if(fits || nameSize <= (nameHasSpace ? 84 : 64)) break;
-      nameSize -= 4;
-    }
-    if(nameLines.length > 2){
-      nameLines = [nameLines[0], truncateToWidth(ctx, nameLines.slice(1).join(nameHasSpace ? ' ' : ''), maxW)];
-    }
+    const nameSize = fitSize(ctx, nameText, maxW, 600, 150, 56, IMG_SERIF);
+    imgFont(ctx, 600, nameSize, IMG_SERIF);
+    const nameLines = [truncateToWidth(ctx, nameText, maxW)];
     const nameLineH = Math.round(nameSize * 1.02);
 
     // 詳細（ラベル＋値の2列）
@@ -2046,7 +2052,7 @@
   }
 
   /* ---- 出力モーダル ---- */
-  const outputState = { kind:null, record:null, year:null, filename:'', bgCanvas:null, renderSeq:0, downloadUrl:null };
+  const outputState = { kind:null, record:null, year:null, filename:'', bgCanvas:null, renderSeq:0, downloadUrl:null, session:0 };
 
   function setDownloadReady(url){
     const a = document.getElementById('outputDownloadBtn');
@@ -2083,6 +2089,8 @@
     }, 'image/png');
   }
   function openOutputModal(){
+    outputState.session++;
+    outputState.bgCanvas = null; // 前回の背景画像は持ち越さない（閉じた後に読み込みが終わった場合も含む）
     updateBgButtons(false);
     const outCanvas = document.getElementById('outputCanvas');
     outCanvas.getContext('2d').clearRect(0, 0, outCanvas.width, outCanvas.height);
@@ -2092,6 +2100,7 @@
   window.closeOutputModal = function(){
     document.getElementById('outputModal').classList.remove('active');
     outputState.renderSeq++;
+    outputState.session++;
     outputState.bgCanvas = null; // 背景画像はその場限り。閉じたら破棄する
     setDownloadReady(null);
   };
@@ -2099,18 +2108,22 @@
     const file = input.files && input.files[0];
     input.value = ''; // 同じファイルを選び直しても change が発火するようにする
     if(!file) return;
+    const session = outputState.session;
     updateBgButtons(true);
     try{
       const loaded = await loadLocalImage(file);
       try{
+        // 読み込み中にモーダルが閉じられた（または別の画像出力が開かれた）場合は結果を捨てる
+        if(session !== outputState.session) return;
         outputState.bgCanvas = buildCoverCanvas(loaded.img, STORY_W, STORY_H);
       } finally {
         loaded.release();
       }
     }catch(e){
       console.warn(e);
-      toast('この形式の画像は読み込めませんでした。JPEG/PNGでお試しください');
+      if(session === outputState.session) toast('この形式の画像は読み込めませんでした。JPEG/PNGでお試しください');
     }
+    if(session !== outputState.session) return;
     updateBgButtons(false);
     renderOutput();
   };
