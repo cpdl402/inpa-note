@@ -462,6 +462,37 @@
   }
   .output-stage.mode-text .output-text-frame{display:block;}
   .output-stage.mode-text.is-dragging .output-text-frame{border-style:solid; border-color:#fff;}
+  /* 明るい標準背景では文字の枠を暗い色にする */
+  .output-stage.is-light .output-text-frame{border-color:rgba(36,28,51,0.6); box-shadow:0 0 0 1px rgba(255,255,255,0.55);}
+  .output-stage.is-light.mode-text.is-dragging .output-text-frame{border-color:#241c33;}
+
+  /* ==== 画像出力：背景の選択（標準背景の見本を横スクロールで並べる） ==== */
+  .output-theme{margin:0 0 12px;}
+  .output-theme .pos-label{font-size:12px; font-weight:700; color:var(--text-muted); margin:0 2px 4px;}
+  .theme-strip{
+    position:relative; display:flex; gap:10px; overflow-x:auto; overflow-y:hidden; padding:6px 4px 6px;
+    margin:0 -4px 6px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; scrollbar-width:none; overscroll-behavior-x:contain;
+  }
+  .theme-strip::-webkit-scrollbar{display:none;}
+  .theme-chip{
+    flex:none; width:60px; padding:0; border:none; background:none; cursor:pointer; scroll-snap-align:start;
+    display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--text-secondary);
+    font-size:11.5px; font-weight:700; line-height:1.2; -webkit-tap-highlight-color:transparent;
+  }
+  .theme-thumb{
+    position:relative; display:block; width:56px; height:100px; border-radius:10px; overflow:hidden;
+    box-shadow:0 0 0 1px rgba(20,10,25,0.16); transition:box-shadow .15s ease, transform .15s ease;
+  }
+  .theme-thumb canvas{display:block; width:100%; height:100%;}
+  .theme-check{
+    position:absolute; right:4px; top:4px; width:20px; height:20px; border-radius:50%; display:none;
+    align-items:center; justify-content:center; background:var(--brand); color:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  }
+  .theme-chip.on .theme-thumb{box-shadow:0 0 0 2px var(--surface-1), 0 0 0 4.5px var(--brand);}
+  .theme-chip.on .theme-check{display:flex;}
+  .theme-chip.on .theme-name{color:var(--text-primary); font-weight:800;}
+  .theme-chip:active .theme-thumb{transform:scale(0.96);}
+  .theme-name{white-space:nowrap;}
 
   /* ==== マスタ管理：パークの色 ==== */
   .master-item .name-wrap{display:flex; align-items:center; gap:7px; min-width:0; max-width:100%;}
@@ -946,6 +977,19 @@
       </label>
       <button class="btn ghost" id="outputCropResetBtn" onclick="resetOutputCrop()">位置をリセット</button>
     </div>
+    <div class="output-theme">
+      <div class="pos-label" id="outputThemeLabel">背景</div>
+      <div class="theme-strip" id="outputThemeStrip" role="radiogroup" aria-labelledby="outputThemeLabel"></div>
+      <div class="output-bg-row">
+        <label class="btn ghost btn-icon" id="outputBgPickBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          <span id="outputBgPickLabel">背景画像を選ぶ</span>
+          <input type="file" accept="image/*" id="outputBgInput" class="output-bg-input" onchange="onOutputBgSelected(this)">
+        </label>
+        <button class="btn ghost" id="outputBgClearBtn" style="display:none;" onclick="clearOutputBg()">標準背景に戻す</button>
+      </div>
+      <p class="output-bg-note">選んだ画像は端末内で使うだけで、保存・送信はしません。</p>
+    </div>
     <div class="output-year-layout" id="outputYearLayout" style="display:none;">
       <div class="pos-label">一覧の段組み</div>
       <div class="output-mode-seg" role="radiogroup" aria-label="一覧の段組み">
@@ -964,15 +1008,6 @@
       <div class="pos-label">文字の位置</div>
       <div class="pos-chips" id="outputPosChips"></div>
     </div>
-    <div class="output-bg-row">
-      <label class="btn ghost btn-icon" id="outputBgPickBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-        <span id="outputBgPickLabel">背景画像を選ぶ</span>
-        <input type="file" accept="image/*" id="outputBgInput" class="output-bg-input" onchange="onOutputBgSelected(this)">
-      </label>
-      <button class="btn ghost" id="outputBgClearBtn" style="display:none;" onclick="clearOutputBg()">標準背景に戻す</button>
-    </div>
-    <p class="output-bg-note">選んだ画像は端末内で使うだけで、保存・送信はしません。</p>
     <div class="modal-actions">
       <button class="btn ghost" onclick="closeOutputModal()">閉じる</button>
       <button type="button" class="btn primary is-pending" id="outputSaveBtn" onclick="saveOutputImage()">ダウンロード</button>
@@ -2406,7 +2441,7 @@
    * ============================================================
    * 2026-11 デザイン刷新:
    *  - アプリ名（D-COUNT。旧称いんぱ手帳）・金額は画像に載せない。パーク名は英語名（Parks.nameEn、空なら日本語名）。
-   *  - 背景は「標準背景（夜空風グラデーション）」または「ユーザーが選んだローカル画像」。
+   *  - 背景は「標準背景（STORY_THEMES の8種類から選ぶ。既定は夜空）」または「ユーザーが選んだローカル画像」。
    *    ローカル画像はFileReader相当（URL.createObjectURL）で読み込み、canvas上で9:16の枠に切り抜く。
    *    切り抜く範囲（位置・拡大率）はプレビュー上のドラッグ／ピンチ／ホイール／スライダーで調整できる
    *    （初期値はcover・中央。最小倍率はcoverで、枠の外に余白は出さない）。サーバー（Drive等）へは一切送信・保存しない。
@@ -2429,6 +2464,7 @@
   function imgMuted(photo){ return photo ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.52)'; }
   const IMG_ACCENT = '#ff8fab';  // ブランドのコーラルピンク（暗い背景上で映えるダークモード側の値）
   const IMG_GOLD = '#f5c36b';    // 当選ショー用（アプリのゴールドを暗背景向けに少し明るく）
+  const IMG_SHADOW_PHOTO = { color:'rgba(0,0,0,0.45)', blur:18, y:2 };
   const WEEKDAY_EN = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
   let imageFontsPromise = null;
@@ -2471,12 +2507,14 @@
     function ch(v){ v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
     return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
   }
-  function imageParkColor(parkId){
+  function imageParkColor(parkId, mode, minLum){
     const hex = parkColor(parkId);
+    // 明るい背景（mode='raw'）では明るくせずパークの色をそのまま使う（点には暗めの縁を付けて埋もれないようにする。drawImgDot参照）
+    if(mode === 'raw') return hex;
     const r0 = parseInt(hex.slice(1,3),16), g0 = parseInt(hex.slice(3,5),16), b0 = parseInt(hex.slice(5,7),16);
     for(let t = 0; t <= 0.45 + 1e-9; t += 0.05){
       const r = Math.round(r0 + (255 - r0) * t), g = Math.round(g0 + (255 - g0) * t), b = Math.round(b0 + (255 - b0) * t);
-      if(relLuminance(r, g, b) >= IMG_DOT_MIN_LUM || t >= 0.45 - 1e-9){
+      if(relLuminance(r, g, b) >= (minLum || IMG_DOT_MIN_LUM) || t >= 0.45 - 1e-9){
         return '#' + [r, g, b].map(function(v){ return v.toString(16).padStart(2, '0'); }).join('');
       }
     }
@@ -2534,7 +2572,7 @@
     ctx.fillRect(0, 0, STORY_W, STORY_H);
   }
 
-  /** 標準背景：深い夜空のグラデーション＋コーラル／ラベンダーの柔らかな光＋控えめな星。 */
+  /** 標準背景「夜空」：深い夜空のグラデーション＋コーラル／ラベンダーの柔らかな光＋控えめな星。 */
   function drawStandardBackground(ctx, W, H){
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#171127');
@@ -2556,6 +2594,285 @@
       ctx.fillStyle = 'rgba(255,255,255,' + (0.12 + rand() * 0.45).toFixed(2) + ')';
       ctx.fill();
     }
+  }
+
+  /* ---- 標準背景のバリエーション（2026-11-12追加） ----
+   * 背景ごとの設定は STORY_THEMES の1か所にまとめる。プレビュー・出力PNG・選択用の見本（サムネイル）がすべてこれを使う。
+   *  { id, name:表示名, light:明るい背景か, draw(ctx, W, H):背景を描く, ink:文字の色づかい }
+   * ink（文字の色づかい）= { text:主な文字, soft:補助の文字, muted:薄い文字, accent:コーラルの短い線, gold:当選ショー,
+   *   rule:1列の一覧の行間の線, shadow:文字の影（null＝なし）, dot:'lighten'（暗い色を明るくする）|'raw'（そのまま）,
+   *   dotLum:暗い色を明るくするときの目標の明るさ（省略時 IMG_DOT_MIN_LUM）, dotRing:点の縁取りの色（null＝なし）, light:明るい背景か }
+   * 明るい背景は文字を暗くし、パークの点は色をそのまま使って暗めの細い縁を付ける（黄色の点が背景に埋もれないように）。
+   * 描画はすべて固定シードの疑似乱数で、毎回同じ絵になる。外部画像は使わない。
+   * 選んだ背景は端末の localStorage（STORY_THEME_KEY）に覚える。
+   */
+  const STORY_THEME_KEY = 'dcount-story-theme';
+  const STORY_THEME_DEFAULT = 'night';
+  /** 'rgba(r,g,b,a)' の不透明度を k 倍にする（k=0 で同じ色の透明）。 */
+  function withAlpha(color, k){
+    return color.replace(/,\s*([\d.]+)\)$/, function(m, a){ return ',' + (Number(a) * k).toFixed(3) + ')'; });
+  }
+  /** 柔らかな光。radialGlow と違い同じ色のまま透明にしていくので、明るい背景でも灰色にくすまない。 */
+  function glow(ctx, x, y, r, color){
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color);
+    g.addColorStop(1, withAlpha(color, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, STORY_W, STORY_H);
+  }
+  function fillLinear(ctx, W, H, x0, y0, x1, y1, stops){
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    stops.forEach(function(s){ g.addColorStop(s[0], s[1]); });
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+  /** 横長にぼかした楕円の光（雲・もや用）。 */
+  function softEllipse(ctx, x, y, rx, ry, color){
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(rx / ry, 1);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, ry);
+    g.addColorStop(0, color);
+    g.addColorStop(1, withAlpha(color, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(-ry, -ry, ry * 2, ry * 2);
+    ctx.restore();
+  }
+  /** 小さな点（星・粒）を散らす。yPow が大きいほど上に集まる。 */
+  function scatterDots(ctx, W, H, seed, n, rgb, aMin, aRange, rMin, rRange, yPow, yMax){
+    const rand = seededRandom(seed);
+    for(let i = 0; i < n; i++){
+      const x = rand() * W;
+      const y = Math.pow(rand(), yPow) * H * (yMax || 1);
+      const r = rMin + rand() * rRange;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(' + rgb + ',' + (aMin + rand() * aRange).toFixed(2) + ')';
+      ctx.fill();
+    }
+  }
+  /** 文字にかかりにくい周辺部（左右の端・上下の端）の点。yMin より上には置かない。 */
+  function edgePoint(rand, W, H, yMin){
+    const y0 = yMin || 0, band = rand();
+    if(band < 0.32) return { x: rand() * W * 0.11, y: y0 + rand() * (H - y0) };
+    if(band < 0.64) return { x: W - rand() * W * 0.11, y: y0 + rand() * (H - y0) };
+    if(band < 0.82 && y0 < H * 0.12) return { x: rand() * W, y: rand() * H * 0.12 };
+    return { x: rand() * W, y: H - rand() * H * 0.12 };
+  }
+  /** 4方向にとがったきらめき。 */
+  function sparkle(ctx, x, y, r, color){
+    const k = r * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.quadraticCurveTo(x + k, y - k, x + r, y);
+    ctx.quadraticCurveTo(x + k, y + k, x, y + r);
+    ctx.quadraticCurveTo(x - k, y + k, x - r, y);
+    ctx.quadraticCurveTo(x - k, y - k, x, y - r);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+  /** 暗い背景用の文字の色づかい（白文字）。 */
+  function darkInk(over){
+    return Object.assign({
+      light:false, text:'#ffffff', soft:'rgba(255,255,255,0.72)', muted:'rgba(255,255,255,0.52)',
+      accent: IMG_ACCENT, gold: IMG_GOLD, rule:'rgba(255,255,255,0.11)', shadow:null, dot:'lighten', dotRing:null
+    }, over || {});
+  }
+  /** 明るい背景用の文字の色づかい。rgb は主な文字の色（"r,g,b"）で、補助・薄い文字はその透明度違い。 */
+  function lightInk(rgb, over){
+    return Object.assign({
+      light:true, text:'rgb(' + rgb + ')', soft:'rgba(' + rgb + ',0.80)', muted:'rgba(' + rgb + ',0.64)',
+      accent:'#dc3f69', gold:'#9a5c00', rule:'rgba(' + rgb + ',0.14)', shadow:null, dot:'raw', dotRing:'rgba(' + rgb + ',0.62)'
+    }, over || {});
+  }
+
+  /** 夕焼け：藍→紫→ローズ→夕日のオレンジ。上の方に少しだけ星、地平線近くにたなびく雲。 */
+  function drawDuskBackground(ctx, W, H){
+    fillLinear(ctx, W, H, 0, 0, 0, H, [[0,'#1b1336'], [0.4,'#3b1f53'], [0.7,'#742c58'], [0.9,'#a2414f'], [1,'#b75446']]);
+    glow(ctx, W * 0.5, H * 1.06, 1150, 'rgba(255,170,96,0.38)');
+    glow(ctx, W * 0.95, H * 0.12, 850, 'rgba(126,100,230,0.22)');
+    glow(ctx, W * 0.05, H * 0.66, 700, 'rgba(255,111,145,0.18)');
+    softEllipse(ctx, W * 0.22, H * 0.79, 520, 34, 'rgba(255,190,150,0.20)');
+    softEllipse(ctx, W * 0.78, H * 0.845, 600, 40, 'rgba(255,170,130,0.20)');
+    softEllipse(ctx, W * 0.45, H * 0.905, 700, 46, 'rgba(255,200,150,0.18)');
+    scatterDots(ctx, W, H, 20261201, 70, '255,240,235', 0.15, 0.45, 0.7, 1.7, 1.6, 0.5);
+  }
+  /** 朝焼け（パステル）：ピーチ→ラベンダー→水色の淡いグラデーションに、白く柔らかな光の玉。 */
+  function drawDawnBackground(ctx, W, H){
+    fillLinear(ctx, W, H, 0, 0, W * 0.45, H, [[0,'#ffe2d2'], [0.45,'#f5dcee'], [1,'#d3e3fb']]);
+    glow(ctx, W * 0.86, H * 0.1, 900, 'rgba(255,255,255,0.75)');
+    glow(ctx, W * 0.08, H * 0.92, 900, 'rgba(255,205,225,0.55)');
+    const rand = seededRandom(20261202);
+    const tints = ['255,255,255', '255,255,255', '255,214,196', '226,210,255', '198,232,226'];
+    for(let i = 0; i < 22; i++){
+      const x = rand() * W, y = rand() * H, r = 40 + rand() * 120;
+      radialGlowAt(ctx, x, y, r, 'rgba(' + tints[i % tints.length] + ',' + (0.28 + rand() * 0.3).toFixed(2) + ')');
+    }
+  }
+  /** 海（ラグーン）：明るい水色のグラデーションに、白い波の線ときらめき。 */
+  function drawLagoonBackground(ctx, W, H){
+    fillLinear(ctx, W, H, 0, 0, 0, H, [[0,'#f0fbfb'], [0.5,'#c8edf2'], [1,'#8fd3e3']]);
+    glow(ctx, W * 0.82, H * 0.04, 950, 'rgba(255,255,255,0.8)');
+    glow(ctx, W * 0.0, H * 0.98, 800, 'rgba(70,170,200,0.22)');
+    const rand = seededRandom(20261203);
+    ctx.lineCap = 'round';
+    for(let k = 0; k < 11; k++){
+      const y0 = H * (0.5 + k * 0.05), amp = 10 + rand() * 14, len = 300 + rand() * 260, ph = rand() * Math.PI * 2;
+      ctx.beginPath();
+      for(let x = -20; x <= W + 20; x += 12){
+        const y = y0 + Math.sin(x / len * Math.PI * 2 + ph) * amp;
+        if(x === -20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.28 + k * 0.025).toFixed(3) + ')';
+      ctx.lineWidth = 2.5 + k * 0.25;
+      ctx.stroke();
+    }
+    for(let i = 0; i < 20; i++){
+      const p = edgePoint(rand, W, H, H * 0.45);
+      sparkle(ctx, p.x, p.y, 6 + rand() * 12, 'rgba(255,255,255,' + (0.5 + rand() * 0.4).toFixed(2) + ')');
+    }
+  }
+  /** 陽だまり（黄色）：クリーム→やわらかな黄色。右上から差す光の帯ときらめき。 */
+  function drawSunnyBackground(ctx, W, H){
+    fillLinear(ctx, W, H, 0, 0, 0, H, [[0,'#fffaea'], [0.55,'#ffefb6'], [1,'#ffe08a']]);
+    glow(ctx, W * 0.85, H * 0.06, 1050, 'rgba(255,255,255,0.88)');
+    glow(ctx, W * 0.05, H * 0.98, 900, 'rgba(255,184,100,0.30)');
+    // 右上の光源から放射状に伸びる淡い光の帯
+    ctx.save();
+    ctx.translate(W * 0.88, -H * 0.04);
+    for(let i = 0; i < 9; i++){
+      const a0 = Math.PI * (0.52 + i * 0.065), a1 = a0 + Math.PI * 0.028;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a0) * 2600, Math.sin(a0) * 2600);
+      ctx.lineTo(Math.cos(a1) * 2600, Math.sin(a1) * 2600);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.fill();
+    }
+    ctx.restore();
+    const rand = seededRandom(20261204);
+    for(let i = 0; i < 26; i++){
+      const warm = i % 3 === 0;
+      const p = edgePoint(rand, W, H);
+      sparkle(ctx, p.x, p.y, 7 + rand() * 15,
+        warm ? 'rgba(236,160,40,' + (0.3 + rand() * 0.25).toFixed(2) + ')' : 'rgba(255,255,255,' + (0.65 + rand() * 0.3).toFixed(2) + ')');
+    }
+  }
+  /** 深い海（深い青）：紺→深い青。上から差し込む光の筋と、立ちのぼる泡。 */
+  function drawDeepSeaBackground(ctx, W, H){
+    fillLinear(ctx, W, H, 0, 0, 0, H, [[0,'#061637'], [0.5,'#0b2a60'], [1,'#11407f']]);
+    glow(ctx, W * 0.6, -H * 0.06, 1150, 'rgba(110,175,255,0.24)');
+    glow(ctx, W * 0.08, H * 1.02, 900, 'rgba(40,180,210,0.26)');
+    ctx.save();
+    ctx.translate(W * 0.62, -H * 0.08);
+    for(let i = 0; i < 6; i++){
+      const a0 = Math.PI * (0.36 + i * 0.06), a1 = a0 + Math.PI * (0.018 + (i % 2) * 0.012);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a0) * 2400, Math.sin(a0) * 2400);
+      ctx.lineTo(Math.cos(a1) * 2400, Math.sin(a1) * 2400);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(0, 0, 0, 1700);
+      g.addColorStop(0, 'rgba(170,215,255,0.075)');
+      g.addColorStop(1, 'rgba(170,215,255,0)');
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+    ctx.restore();
+    const rand = seededRandom(20261205);
+    // 泡は文字にかからないよう左右の端に寄せる
+    for(let i = 0; i < 34; i++){
+      const side = rand() < 0.5, x = side ? rand() * W * 0.12 : W - rand() * W * 0.12, y = H * (1 - Math.pow(rand(), 1.3)), r = 3 + rand() * 11;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(200,230,255,' + (0.14 + rand() * 0.22).toFixed(2) + ')';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
+    scatterDots(ctx, W, H, 20261206, 90, '200,228,255', 0.08, 0.3, 0.7, 1.5, 1, 1);
+  }
+  /** ホワイト（シンプル）：生成りの紙のような単色に近い背景。ごく細かい粒と細い枠線。 */
+  function drawPaperBackground(ctx, W, H){
+    fillLinear(ctx, W, H, 0, 0, W, H, [[0,'#fbf9f5'], [1,'#efe9e1']]);
+    glow(ctx, W * 0.9, H * 0.08, 900, 'rgba(255,214,226,0.35)');
+    scatterDots(ctx, W, H, 20261207, 1600, '80,60,50', 0.03, 0.05, 0.7, 1.1, 1, 1);
+    ctx.strokeStyle = 'rgba(36,28,51,0.16)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(44, 44, W - 88, H - 88);
+  }
+  /** チャコール（シンプル）：墨色の単色に近い背景。細かいドットの模様と、右下にごく淡いコーラルの光。 */
+  function drawCharcoalBackground(ctx, W, H){
+    fillLinear(ctx, W, H, 0, 0, 0, H, [[0,'#1a1920'], [1,'#27252e']]);
+    glow(ctx, W * 0.92, H * 0.94, 950, 'rgba(255,111,145,0.12)');
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    for(let y = 30; y < H; y += 40){
+      for(let x = 30; x < W; x += 40){
+        ctx.beginPath();
+        ctx.arc(x, y, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  /** glow の範囲を円の周りだけに限った版（光の玉をたくさん描くとき用）。 */
+  function radialGlowAt(ctx, x, y, r, color){
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color);
+    g.addColorStop(0.55, withAlpha(color, 0.55));
+    g.addColorStop(1, withAlpha(color, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  const STORY_THEMES = [
+    { id:'night',    name:'夜空',       light:false, draw: drawStandardBackground, ink: darkInk() },
+    { id:'dusk',     name:'夕焼け',     light:false, draw: drawDuskBackground,
+      ink: darkInk({ soft:'rgba(255,255,255,0.80)', muted:'rgba(255,255,255,0.62)', gold:'#ffd27a', dotLum:0.32,
+        shadow:{ color:'rgba(40,8,32,0.38)', blur:14, y:1 } }) },
+    { id:'deepsea',  name:'深い海',     light:false, draw: drawDeepSeaBackground,
+      ink: darkInk({ soft:'rgba(255,255,255,0.78)', muted:'rgba(255,255,255,0.58)', rule:'rgba(255,255,255,0.13)', dotLum:0.4 }) },
+    { id:'charcoal', name:'チャコール', light:false, draw: drawCharcoalBackground, ink: darkInk() },
+    { id:'dawn',     name:'朝焼け',     light:true,  draw: drawDawnBackground,   ink: lightInk('44,32,70') },
+    { id:'lagoon',   name:'海',         light:true,  draw: drawLagoonBackground, ink: lightInk('12,46,70', { accent:'#d93a66', gold:'#8f5600' }) },
+    { id:'sunny',    name:'陽だまり',   light:true,  draw: drawSunnyBackground,  ink: lightInk('58,40,14', { accent:'#d6375f', gold:'#8a4b00', dotRing:'rgba(58,40,14,0.7)' }) },
+    { id:'paper',    name:'ホワイト',   light:true,  draw: drawPaperBackground,  ink: lightInk('36,28,51') }
+  ];
+  /** 背景の定義を返す（見つからなければ夜空）。 */
+  function storyTheme(id){
+    for(let i = 0; i < STORY_THEMES.length; i++){ if(STORY_THEMES[i].id === id) return STORY_THEMES[i]; }
+    return STORY_THEMES[0];
+  }
+  const PHOTO_INK = darkInk({ soft:'rgba(255,255,255,0.88)', muted:'rgba(255,255,255,0.72)', shadow: IMG_SHADOW_PHOTO, photo:true });
+  /** 文字の色づかい：写真背景なら白文字＋影（従来どおり）、標準背景なら背景ごとの設定。 */
+  function storyInk(themeId, photo){
+    return photo ? PHOTO_INK : storyTheme(themeId).ink;
+  }
+  /** 文字ブロックの引数（従来の photo 真偽値、または ink）を ink にそろえる。 */
+  function toInk(v){ return (v && typeof v === 'object') ? v : storyInk(STORY_THEME_DEFAULT, !!v); }
+  /** パークの色の点。明るい背景では色をそのまま使い、暗めの細い縁を付ける。 */
+  function drawImgDot(ctx, ink, parkId, x, y, r){
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = imageParkColor(parkId, ink.dot, ink.dotLum);
+    ctx.fill();
+    if(ink.dotRing){
+      ctx.lineWidth = Math.max(1.5, r * 0.2);
+      ctx.strokeStyle = ink.dotRing;
+      ctx.stroke();
+    }
+  }
+  /** 端末に覚えた背景（無い・不正なら夜空）。GAS配信のiframeでは localStorage が例外を出すことがあるので必ず try で囲む。 */
+  let storyThemeMemo = null;
+  function loadStoryThemeId(){
+    let v = null;
+    try{ v = localStorage.getItem(STORY_THEME_KEY); }catch(e){ v = null; }
+    if(!v && storyThemeMemo) v = storyThemeMemo;
+    return STORY_THEMES.some(function(t){ return t.id === v; }) ? v : STORY_THEME_DEFAULT;
+  }
+  function saveStoryThemeId(id){
+    storyThemeMemo = id;
+    try{ localStorage.setItem(STORY_THEME_KEY, id); }catch(e){ /* 保存できない環境では、この画面を開いている間だけ覚える */ }
   }
 
   /* ---- 背景画像の切り抜き範囲 ----
@@ -2650,14 +2967,16 @@
       ctx.fillRect(0, H - overlay.bottomLen, W, overlay.bottomLen);
     }
   }
-  /** 写真背景のときだけ文字に控えめな影を付ける（標準背景では不要）。
+  /** 文字に控えめな影を付ける。on は影の設定 { color, blur, y }（ink.shadow）、true（写真用の影）、または偽（影なし）。
+   *  写真背景と一部の標準背景（夕焼け）だけ影を付ける。
    *  f は実際の描画倍率。canvasの影（ぼかし・ずれ）は拡大縮小の影響を受けないため、倍率を掛けて見た目をそろえる。 */
   function setTextShadow(ctx, on, f){
     f = f || 1;
     if(on){
-      ctx.shadowColor = 'rgba(0,0,0,0.45)';
-      ctx.shadowBlur = 18 * f;
-      ctx.shadowOffsetY = 2 * f;
+      const sh = typeof on === 'object' ? on : IMG_SHADOW_PHOTO;
+      ctx.shadowColor = sh.color;
+      ctx.shadowBlur = sh.blur * f;
+      ctx.shadowOffsetY = sh.y * f;
     } else {
       ctx.shadowColor = 'rgba(0,0,0,0)';
       ctx.shadowBlur = 0;
@@ -2784,7 +3103,8 @@
    * 単発記録カードの文字ブロック：パーク名（英語名）を主役に、日付・パスポート種別・当選ショー／座席位置（あれば）。
    * 標準（auto）の配置は従来どおり：写真背景のときは写真を見せるため下寄せ、標準背景のときは中央寄せ（いずれも左揃え）。
    */
-  function buildRecordTextBlock(r, photo, align){
+  function buildRecordTextBlock(r, inkOrPhoto, align){
+    const ink = toInk(inkOrPhoto), photo = !!ink.photo;
     const m = measureCtx();
     const W = STORY_W, H = STORY_H;
     const X = 108, maxW = W - X * 2;
@@ -2800,10 +3120,10 @@
     const nameLineH = Math.round(nameSize * 1.02);
 
     // 詳細（左揃えはラベル＋値の2列。中央・右揃えは「ラベル 値」をひとかたまりにして揃える）
-    const details = [{ label:'TICKET', value: passTypeName(r.passTypeId) || '—', color: IMG_TEXT }];
+    const details = [{ label:'TICKET', value: passTypeName(r.passTypeId) || '—', color: ink.text }];
     if(r.showId){
-      details.push({ label:'SHOW', value: showName(r.showId), color: IMG_GOLD, labelColor: IMG_GOLD });
-      if(r.seatPosition) details.push({ label:'SEAT', value: String(r.seatPosition), color: IMG_TEXT });
+      details.push({ label:'SHOW', value: showName(r.showId), color: ink.gold, labelColor: ink.gold });
+      if(r.seatPosition) details.push({ label:'SEAT', value: String(r.seatPosition), color: ink.text });
     }
     const labelW = 190, labelGap = 28;
     let rowsW = 0;
@@ -2834,37 +3154,34 @@
     const CW = block.cw;
     block.draw = function(ctx, f){
       const P = TEXT_PAD;
-      setTextShadow(ctx, photo, f);
+      setTextShadow(ctx, ink.shadow, f);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
 
       // 1) メタ行：パークの色の小さなドット＋日付＋曜日
       let y = P + 30;
       const mx0 = P + alignX(align, CW, metaW);
-      ctx.beginPath();
-      ctx.arc(mx0 + 9, y - 11, 9, 0, Math.PI * 2);
-      ctx.fillStyle = imageParkColor(r.parkId);
-      ctx.fill();
+      drawImgDot(ctx, ink, r.parkId, mx0 + 9, y - 11, 9);
       imgFont(ctx, 500, 32, IMG_SANS);
-      ctx.fillStyle = imgSoft(photo);
+      ctx.fillStyle = ink.soft;
       const mx = drawSpaced(ctx, dp.ymd, mx0 + 38, y, 4);
-      ctx.fillStyle = imgMuted(photo);
+      ctx.fillStyle = ink.muted;
       drawSpaced(ctx, '·', mx + 18, y, 0);
       drawSpaced(ctx, dp.wd, mx + 46, y, 6);
       y = P + metaH + gapMetaName;
 
       // 2) パーク名（左揃えのときはセリフ体の左の余白分だけ少し左へ寄せ、縦の線をそろえる）
       imgFont(ctx, 600, nameSize, IMG_SERIF);
-      ctx.fillStyle = IMG_TEXT;
+      ctx.fillStyle = ink.text;
       const nx = align === 'left' ? P - nameSize * 0.03 : P + alignX(align, CW, nameW);
       ctx.fillText(nameLine, nx, y + nameSize * 0.78);
       y += nameLineH + gapNameRule;
 
       // 3) アクセントの短い罫線
       setTextShadow(ctx, false, f);
-      ctx.fillStyle = IMG_ACCENT;
+      ctx.fillStyle = ink.accent;
       ctx.fillRect(P + alignX(align, CW, ruleW), y, ruleW, ruleH);
-      setTextShadow(ctx, photo, f);
+      setTextShadow(ctx, ink.shadow, f);
       y += ruleH + gapRuleDetails;
 
       // 4) 詳細
@@ -2873,7 +3190,7 @@
         const lx = align === 'left' ? P : P + alignX(align, CW, d.rowW);
         const vx = align === 'left' ? P + labelW : lx + d.labelSp + labelGap;
         imgFont(ctx, 500, 24, IMG_SANS);
-        ctx.fillStyle = d.labelColor || imgMuted(photo);
+        ctx.fillStyle = d.labelColor || ink.muted;
         drawSpaced(ctx, d.label, lx, by - 3, 6);
         imgFont(ctx, 500, d.vSize, IMG_SANS);
         ctx.fillStyle = d.color;
@@ -3040,7 +3357,8 @@
   }
 
   /** 年間まとめの文字ブロック：年・件数・パーク別合計・対象年の全記録（日付昇順「日付＋パーク名（英語）」の一覧）。 */
-  function buildYearTextBlock(year, photo, align, layout){
+  function buildYearTextBlock(year, inkOrPhoto, align, layout){
+    const ink = toInk(inkOrPhoto);
     const m = measureCtx();
     const M = yearSummaryMetrics(year, layout);
     const records = M.records, n = M.n, t = M.t, rows = M.rows, L = M.layout;
@@ -3088,24 +3406,24 @@
 
     block.draw = function(ctx, f){
       const P = TEXT_PAD;
-      setTextShadow(ctx, photo, f);
+      setTextShadow(ctx, ink.shadow, f);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
 
       // 1) 年（セリフ体）
       imgFont(ctx, 500, t.yearSize, IMG_SERIF);
-      ctx.fillStyle = IMG_TEXT;
+      ctx.fillStyle = ink.text;
       const yx = align === 'left' ? P - t.yearSize * 0.04 : P + alignX(align, CW, yearW);
       ctx.fillText(String(year), yx, P + yearCap);
       // 2) 件数（小さく、字間を空けて）＋アクセントの線
       const countY = P + countTop + 26;
       const cx0 = P + alignX(align, CW, countW);
       setTextShadow(ctx, false, f);
-      ctx.fillStyle = IMG_ACCENT;
+      ctx.fillStyle = ink.accent;
       ctx.fillRect(cx0, countY - 11, 40, 3);
-      setTextShadow(ctx, photo, f);
+      setTextShadow(ctx, ink.shadow, f);
       imgFont(ctx, 500, 26, IMG_SANS);
-      ctx.fillStyle = imgSoft(photo);
+      ctx.fillStyle = ink.soft;
       drawSpaced(ctx, countLabel, cx0 + 58, countY, 7);
 
       // 3) パーク別合計（● TDL 18　● TDS 14 …）。ドットは一覧と同じパークの色。
@@ -3114,17 +3432,14 @@
         const base = Math.round(P + totalsTop + li * totals.lineH + totals.lineH / 2 + totals.size * 0.35);
         line.items.forEach(function(it, j){
           if(j) lx += totals.itemGap;
-          ctx.beginPath();
-          ctx.arc(lx + totals.dotR, base - totals.size * 0.34, totals.dotR, 0, Math.PI * 2);
-          ctx.fillStyle = it.t.color;
-          ctx.fill();
+          drawImgDot(ctx, ink, it.t.id, lx + totals.dotR, base - totals.size * 0.34, totals.dotR);
           lx += totals.dotR * 2 + totals.dotGap;
           imgFont(ctx, 500, totals.size, IMG_SANS);
-          ctx.fillStyle = imgSoft(photo);
+          ctx.fillStyle = ink.soft;
           drawSpaced(ctx, it.label, lx, base, totals.sp);
           lx += it.labelW + totals.numGap;
           imgFont(ctx, 600, totals.size, IMG_SANS);
-          ctx.fillStyle = IMG_TEXT;
+          ctx.fillStyle = ink.text;
           ctx.fillText(it.num, lx, base);
           lx += it.numW;
         });
@@ -3144,26 +3459,23 @@
         // 1列表示のときは行間に細い罫線（写真上でもうるさくならないよう極薄に）
         if(t.cols === 1 && row > 0){
           setTextShadow(ctx, false, f);
-          ctx.fillStyle = 'rgba(255,255,255,0.11)';
+          ctx.fillStyle = ink.rule;
           ctx.fillRect(x, rowTop, listW, 1);
-          setTextShadow(ctx, photo, f);
+          setTextShadow(ctx, ink.shadow, f);
         }
         const dp = dateParts(e.r.date);
-        ctx.beginPath();
-        ctx.arc(x + dotR, base - dateSize * 0.36, dotR, 0, Math.PI * 2);
-        ctx.fillStyle = imageParkColor(e.r.parkId);
-        ctx.fill();
+        drawImgDot(ctx, ink, e.r.parkId, x + dotR, base - dateSize * 0.36, dotR);
 
         imgFont(ctx, 500, dateSize, IMG_SANS);
-        ctx.fillStyle = imgSoft(photo);
+        ctx.fillStyle = ink.soft;
         ctx.fillText(dp.md, x + dotSpace, base);
         if(t.weekday){
           imgFont(ctx, 500, Math.round(dateSize * 0.62), IMG_SANS);
-          ctx.fillStyle = imgMuted(photo);
+          ctx.fillStyle = ink.muted;
           drawSpaced(ctx, dp.wd, x + dotSpace + dateW + 18, base, 3);
         }
         imgFont(ctx, 500, e.size, IMG_SANS);
-        ctx.fillStyle = IMG_TEXT;
+        ctx.fillStyle = ink.text;
         ctx.fillText(e.text, x + dateColW, base);
       });
       setTextShadow(ctx, false, f);
@@ -3171,8 +3483,9 @@
     return block;
   }
 
-  function buildTextBlock(kind, subject, photo, align, layout){
-    return kind === 'record' ? buildRecordTextBlock(subject, photo, align) : buildYearTextBlock(subject, photo, align, layout);
+  /** 文字ブロックを組む。ink は文字の色づかい（storyInk の結果。従来どおり写真背景かどうかの真偽値も受け付ける）。 */
+  function buildTextBlock(kind, subject, ink, align, layout){
+    return kind === 'record' ? buildRecordTextBlock(subject, ink, align) : buildYearTextBlock(subject, ink, align, layout);
   }
 
   /** 写真背景の暗幕。年間まとめは文字量が多いので全体を均一に暗くする（配置によらず同じ）。
@@ -3187,28 +3500,30 @@
     return { base:0.15, top:0.32, topLen:520, bottom:0.32, bottomLen:520,
       band:{ y0: Math.round(y0), y1: Math.round(y1), alpha:0.72, fade:420 } };
   }
-  /** 背景（標準背景、または写真＋暗幕）を描く。overlayOnly=true なら写真は描かず暗幕だけ（プレビューの中間レイヤー用）。 */
-  function drawStoryBackground(ctx, kind, bg, block, rect, overlayOnly){
+  /** 背景（標準背景、または写真＋暗幕）を描く。overlayOnly=true なら写真は描かず暗幕だけ（プレビューの中間レイヤー用）。
+   *  themeId: 標準背景の種類（STORY_THEMES の id。省略・不正なら夜空）。写真背景のときは使わない。 */
+  function drawStoryBackground(ctx, kind, bg, block, rect, overlayOnly, themeId){
     if(bg) drawPhotoBackground(ctx, STORY_W, STORY_H, bg, storyPhotoOverlay(kind, block, rect), overlayOnly);
-    else drawStandardBackground(ctx, STORY_W, STORY_H);
+    else storyTheme(themeId).draw(ctx, STORY_W, STORY_H);
   }
   /**
    * 画像を組み立てる（出力PNG用。プレビューも同じ部品＝背景・暗幕・文字ブロック・textBlockRect を使う）。
    * bg: null（標準背景）または { image, crop }。overlayOnly=true なら写真を描かない。
    * pos: 文字の配置（省略時は標準＝従来の配置）。layout: 年間まとめの段組み（省略時は自動。resolveYearLayout参照）。
+   * themeId: 標準背景の種類（省略時は夜空）。背景と文字の色づかいの両方がこれで決まる。
    */
-  function composeStoryImage(kind, subject, bg, overlayOnly, pos, layout){
-    const photo = !!bg;
-    const block = buildTextBlock(kind, subject, photo, textAlignOf(pos), layout);
+  function composeStoryImage(kind, subject, bg, overlayOnly, pos, layout, themeId){
+    const ink = storyInk(themeId, !!bg);
+    const block = buildTextBlock(kind, subject, ink, textAlignOf(pos), layout);
     const rect = textBlockRect(block, pos);
     const canvas = newStoryCanvas();
     const ctx = canvas.getContext('2d');
-    drawStoryBackground(ctx, kind, bg, block, rect, overlayOnly);
+    drawStoryBackground(ctx, kind, bg, block, rect, overlayOnly, themeId);
     drawTextBlock(ctx, block, rect);
     return canvas;
   }
-  function composeRecordCardImage(r, bg, overlayOnly, pos){ return composeStoryImage('record', r, bg, overlayOnly, pos); }
-  function composeYearSummaryImage(year, bg, overlayOnly, pos, layout){ return composeStoryImage('year', year, bg, overlayOnly, pos, layout); }
+  function composeRecordCardImage(r, bg, overlayOnly, pos, themeId){ return composeStoryImage('record', r, bg, overlayOnly, pos, null, themeId); }
+  function composeYearSummaryImage(year, bg, overlayOnly, pos, layout, themeId){ return composeStoryImage('year', year, bg, overlayOnly, pos, layout, themeId); }
 
   /* ---- 背景画像（ローカル読み込みのみ。サーバーへは送らない） ---- */
 
@@ -3296,6 +3611,7 @@
   const outputState = {
     kind:null, record:null, year:null, filename:'',
     bgImage:null,            // 元画像（buildSourceCanvas済み）。null＝標準背景
+    themeId: STORY_THEME_DEFAULT, // 標準背景の種類（STORY_THEMES の id）。開くたびに端末に覚えた値を読む
     bgLoading:false,
     crop: defaultCrop(),     // 切り抜き範囲
     textPos: defaultTextPos(), // 文字の配置（プリセット or 自由配置）。モーダルを開くたびに「標準」に戻す
@@ -3502,21 +3818,22 @@
     return outputState.bgImage ? { image: outputState.bgImage, crop: outputState.crop } : null;
   }
   function outputSubject(){ return outputState.kind === 'record' ? outputState.record : outputState.year; }
-  /** 今の文字ブロック。文字揃え・背景の有無（影や白の濃さが変わる）が変わったときだけ組み直す。 */
+  /** 今の文字ブロック。文字揃え・背景（写真か、標準背景の種類か。文字の色・影が変わる）が変わったときだけ組み直す。 */
   function currentTextBlock(){
     const photo = !!outputState.bgImage;
     const align = textAlignOf(outputState.textPos);
     const layout = currentYearLayoutSpec();
-    const key = outputState.session + '|' + outputState.kind + '|' + photo + '|' + align + '|' + (layout ? layout.cols + ':' + layout.split : '');
+    const look = photo ? 'photo' : 'theme:' + outputState.themeId;
+    const key = outputState.session + '|' + outputState.kind + '|' + look + '|' + align + '|' + (layout ? layout.cols + ':' + layout.split : '');
     if(!outputState.textBlock || outputState.textBlockKey !== key){
-      outputState.textBlock = buildTextBlock(outputState.kind, outputSubject(), photo, align, layout);
+      outputState.textBlock = buildTextBlock(outputState.kind, outputSubject(), storyInk(outputState.themeId, photo), align, layout);
       outputState.textBlockKey = key;
     }
     return outputState.textBlock;
   }
   function currentTextRect(){ return textBlockRect(currentTextBlock(), outputState.textPos); }
   function composeOutput(bg, overlayOnly){
-    return composeStoryImage(outputState.kind, outputSubject(), bg, overlayOnly, outputState.textPos, currentYearLayoutSpec());
+    return composeStoryImage(outputState.kind, outputSubject(), bg, overlayOnly, outputState.textPos, currentYearLayoutSpec(), outputState.themeId);
   }
 
   /* ---- 年間まとめの段組み（1列／2列・2列目の始まり）。年間まとめのときだけ表示する ---- */
@@ -3632,14 +3949,14 @@
   function drawOutputBaseLayer(force){
     const bg = currentOutputBg();
     const block = currentTextBlock(), rect = currentTextRect();
-    const key = bg ? 'photo:' + JSON.stringify(storyPhotoOverlay(outputState.kind, block, rect)) : 'standard';
+    const key = bg ? 'photo:' + JSON.stringify(storyPhotoOverlay(outputState.kind, block, rect)) : 'standard:' + outputState.themeId;
     if(!force && key === outputState.baseKey) return;
     outputState.baseKey = key;
     const c = document.getElementById('outputCanvas');
     if(c.width !== STORY_W || c.height !== STORY_H){ c.width = STORY_W; c.height = STORY_H; }
     const ctx = c.getContext('2d');
     ctx.clearRect(0, 0, STORY_W, STORY_H);
-    drawStoryBackground(ctx, outputState.kind, bg, block, rect, true);
+    drawStoryBackground(ctx, outputState.kind, bg, block, rect, true, outputState.themeId);
   }
   /** 文字レイヤーを今の倍率に合わせた解像度（表示サイズ×dpr）で描き直す。指を離したときと配置の切り替え時だけ呼ぶ。 */
   function drawOutputTextLayer(){
@@ -3700,6 +4017,7 @@
         if(Math.abs(currentTextRect().s - outputState.textRender.s) > 1e-6) drawOutputTextLayer();
         else applyTextTransform();
         drawOutputBaseLayer(false);
+        drawPhotoThumb();
         exportOutputPng();
       });
     }, delay);
@@ -3729,7 +4047,10 @@
     if(seq !== outputState.renderSeq) return;
     outputState.textBlock = null; // フォント読み込み後・背景の有無が変わった後に組み直す
     const bg = currentOutputBg();
-    document.getElementById('outputStage').classList.toggle('has-photo', !!bg);
+    const stageEl = document.getElementById('outputStage');
+    stageEl.classList.toggle('has-photo', !!bg);
+    // 明るい標準背景では、文字の枠（点線）を暗い色にして見えるようにする
+    stageEl.classList.toggle('is-light', !bg && storyTheme(outputState.themeId).light);
     if(outputState.textPos.preset === 'free'){
       const fr = clampTextRect(outputState.textPos, currentTextBlock());
       outputState.textPos.x = fr.x; outputState.textPos.y = fr.y; outputState.textPos.s = fr.s;
@@ -3741,6 +4062,7 @@
     syncTextUI();
     syncEditModeUI();
     syncYearLayoutUI();
+    syncThemePicker();
     if(bg) drawOutputBgLayer();
     exportOutputPng();
   }
@@ -3946,6 +4268,7 @@
     if(outputState.bgRaf){ cancelAnimationFrame(outputState.bgRaf); outputState.bgRaf = 0; }
     const stage = document.getElementById('outputStage');
     stage.classList.remove('has-photo', 'is-dragging');
+    stage.classList.toggle('is-light', storyTheme(outputState.themeId).light);
     const bgc = document.getElementById('outputBgCanvas');
     bgc.width = 1; bgc.height = 1; // 大きな背景用キャンバスのメモリを手放す
   }
@@ -3963,12 +4286,117 @@
     document.getElementById('outputTextFrame').style.width = '0';
   }
 
+  /* ---- 背景の選択（標準背景の見本を横に並べる。写真を背景にしているときは先頭に「写真」も並べる） ----
+   * 見本は STORY_THEMES の draw をそのまま縮小して描き、文字色の見本（Aa）とアクセントの線を重ねる。
+   * 見本を選ぶと写真は外れる（写真を選び直すときは「背景画像を選ぶ」ボタン）。選んだ背景は端末に覚える。 */
+  const THEME_THUMB_W = 56, THEME_THUMB_H = 100;
+  let themeThumbsFonted = false;
+  function themeThumbSize(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    return { w: Math.round(THEME_THUMB_W * dpr), h: Math.round(THEME_THUMB_H * dpr) };
+  }
+  function drawThemeThumb(canvas, theme){
+    const sz = themeThumbSize();
+    if(canvas.width !== sz.w || canvas.height !== sz.h){ canvas.width = sz.w; canvas.height = sz.h; }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(sz.w / STORY_W, 0, 0, sz.h / STORY_H, 0, 0);
+    theme.draw(ctx, STORY_W, STORY_H);
+    // 文字の色の見本（影は縮小すると大きくなりすぎるので付けない）
+    const ink = theme.ink;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = ink.text;
+    imgFont(ctx, 600, 420, IMG_SERIF);
+    ctx.fillText('Aa', STORY_W / 2, 1080);
+    ctx.fillStyle = ink.accent;
+    ctx.fillRect(STORY_W / 2 - 130, 1200, 260, 18);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  function drawAllThemeThumbs(){
+    STORY_THEMES.forEach(function(t){
+      const c = document.querySelector('#outputThemeStrip [data-theme="' + t.id + '"] canvas');
+      if(c) drawThemeThumb(c, t);
+    });
+  }
+  /** 「写真」の見本：今の写真の切り抜き範囲を縮小して描く。 */
+  function drawPhotoThumb(){
+    const c = document.getElementById('outputThemePhotoThumb');
+    const bg = currentOutputBg();
+    if(!c || !bg) return;
+    const sz = themeThumbSize();
+    if(c.width !== sz.w || c.height !== sz.h){ c.width = sz.w; c.height = sz.h; }
+    drawCroppedPhoto(c.getContext('2d'), bg, sz.w, sz.h);
+  }
+  function themeChipHtml(id, name, canvasId){
+    return '<button type="button" class="theme-chip" role="radio" aria-checked="false" data-theme="' + id + '" onclick="selectStoryTheme(\'' + id + '\')">' +
+      '<span class="theme-thumb"><canvas' + (canvasId ? ' id="' + canvasId + '"' : '') + ' width="1" height="1" aria-hidden="true"></canvas>' +
+      '<span class="theme-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span></span>' +
+      '<span class="theme-name">' + name + '</span></button>';
+  }
+  /** 見本の並びを作る（初回だけ）。見本の絵は一度描けば変わらないので使い回す（画像用フォントが読めたら一度だけ描き直す）。 */
+  function renderThemePicker(){
+    const strip = document.getElementById('outputThemeStrip');
+    if(!strip.childElementCount){
+      strip.innerHTML = themeChipHtml('photo', '写真', 'outputThemePhotoThumb') +
+        STORY_THEMES.map(function(t){ return themeChipHtml(t.id, t.name); }).join('');
+      drawAllThemeThumbs();
+    }
+    if(!themeThumbsFonted){
+      ensureImageFonts().then(function(){
+        if(themeThumbsFonted) return;
+        themeThumbsFonted = true;
+        drawAllThemeThumbs();
+      });
+    }
+    syncThemePicker();
+  }
+  /** 選択中の印と「写真」の見本の表示を今の状態に合わせ、選択中の見本が見える位置まで横にスクロールする。 */
+  function syncThemePicker(){
+    const strip = document.getElementById('outputThemeStrip');
+    if(!strip || !strip.childElementCount) return;
+    const photo = !!outputState.bgImage;
+    const cur = photo ? 'photo' : outputState.themeId;
+    strip.querySelector('[data-theme="photo"]').style.display = photo ? '' : 'none';
+    let onEl = null;
+    strip.querySelectorAll('.theme-chip').forEach(function(b){
+      const on = b.getAttribute('data-theme') === cur;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+      if(on) onEl = b;
+    });
+    if(photo) drawPhotoThumb();
+    if(onEl && strip.clientWidth){
+      const l = onEl.offsetLeft, r = l + onEl.offsetWidth;
+      if(l < strip.scrollLeft || r > strip.scrollLeft + strip.clientWidth){
+        strip.scrollLeft = Math.max(0, l - (strip.clientWidth - onEl.offsetWidth) / 2);
+      }
+    }
+  }
+  window.selectStoryTheme = function(id){
+    if(!outputState.kind || !document.getElementById('outputModal').classList.contains('active')) return;
+    if(id === 'photo') return; // 写真は「背景画像を選ぶ」から選ぶ。すでに選択中なので何もしない
+    const theme = storyTheme(id);
+    const hadPhoto = !!outputState.bgImage;
+    if(theme.id === outputState.themeId && !hadPhoto) return;
+    outputState.themeId = theme.id;
+    saveStoryThemeId(theme.id);
+    if(hadPhoto){
+      resetOutputBgState(); // 標準背景を選んだら写真は外す
+      outputState.editMode = 'text';
+      updateBgButtons(false);
+    }
+    syncThemePicker();
+    renderOutput(); // 背景と、文字の色（文字ブロック）を描き直す。文字の配置・段組みはそのまま
+  };
+
   function openOutputModal(){
     outputState.session++;
     resetOutputBgState(); // 前回の背景画像は持ち越さない（閉じた後に読み込みが終わった場合も含む）
     resetOutputTextState();
     outputState.yearLayout = { cols:null, split:null }; // 段組みは毎回「自動」から始める
     outputState.yearLayoutOpts = null;
+    outputState.themeId = loadStoryThemeId();           // 標準背景は前回選んだもの（端末に覚えた値）から始める
+    renderThemePicker();
     closeSaveOverlay();
     setDownloadReady(null);
     syncYearLayoutUI();
