@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>D-COUNT</title>
+<!-- アプリのアイコン（2026-11-12）。SVGはdata URL（#は%23）。PNG2つはGitHub Pages版のリポジトリ直下に置いたものを相対パスで読む
+     （GAS版はiframe内なので効かないが害は無い。GAS版のタブのアイコンはCode.gsのsetFaviconUrlで指定している） -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='dcg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff6f91'/%3E%3Cstop offset='1' stop-color='%23a98bf0'/%3E%3C/linearGradient%3E%3CclipPath id='dcc'%3E%3Cpath d='M12 18H52a4 4 0 0 1 4 4v6a4 4 0 0 0 0 8v6a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-6a4 4 0 0 0 0-8v-6a4 4 0 0 1 4-4z'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23dcg)'/%3E%3Cpath d='M12 18H52a4 4 0 0 1 4 4v6a4 4 0 0 0 0 8v6a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-6a4 4 0 0 0 0-8v-6a4 4 0 0 1 4-4z' fill='%23fff'/%3E%3Crect x='42' y='16' width='16' height='32' fill='%23e3d9fc' clip-path='url(%23dcc)'/%3E%3Cpath d='M19.5 24.5h4.5a7.5 7.5 0 0 1 0 15h-4.5z' fill='none' stroke='%23ff6f91' stroke-width='4.2' stroke-linejoin='round'/%3E%3Cpath d='M49 28.5v7M45.5 32h7' stroke='%238f6fe0' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="D-COUNT">
+<meta name="theme-color" content="#f7f5fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#18131f" media="(prefers-color-scheme: dark)">
 <style>
   :root{
     --surface-0:#f7f5fb; --surface-1:#fdfcff; --surface-2:#ffffff;
@@ -66,11 +74,12 @@
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     min-height:100vh; padding:32px 20px; text-align:center;
   }
+  /* アプリのアイコン（チケット＋D＋「+1」の半券。ファビコン・ホーム画面用PNGと同じ絵柄） */
   .auth-logo{
-    width:64px; height:64px; border-radius:50%; background:var(--brand); color:var(--brand-ink);
-    display:flex; align-items:center; justify-content:center; margin-bottom:14px;
+    width:64px; height:64px; border-radius:14px; margin-bottom:14px;
     box-shadow:0 6px 18px rgba(255,111,145,0.35);
   }
+  .auth-logo svg{display:block; width:64px; height:64px;}
   .auth-title{font-size:22px; font-weight:800; margin:0 0 2px;}
   .auth-subtitle{font-size:13px; color:var(--text-muted); margin:0 0 24px;}
   .auth-card{
@@ -187,12 +196,44 @@
     width:100%; margin-top:12px; padding:10px; border-radius:11px; border:none; background:transparent;
     color:var(--critical); font-weight:700; font-size:13px; cursor:pointer;
   }
-  .records-legend{
-    display:flex; flex-wrap:wrap; gap:10px 14px; margin-bottom:12px; padding:2px 2px;
+  /* ==== 記録一覧：選んでいる年の集計（合計＋パーク別。旧「凡例」を兼ねる） ==== */
+  .records-summary{
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
+    padding:9px 12px; margin:0 0 10px;
   }
-  .legend-chip{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-secondary); cursor:pointer;}
+  .records-summary:empty{display:none;}
+  .rs-total{display:flex; align-items:baseline; gap:4px; flex:none; font-variant-numeric:tabular-nums;}
+  .rs-total .rs-num{font-size:20px; font-weight:800; line-height:1.1; color:var(--text-primary);}
+  .rs-total .rs-unit{font-size:11px; font-weight:700; color:var(--text-secondary);}
+  .rs-total .rs-of{font-size:11px; color:var(--text-muted); margin-left:2px;}
+  .rs-tag{
+    flex:none; align-self:center; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;
+    background:var(--brand-weak); color:var(--text-primary); margin-right:2px;
+  }
+  .rs-parks{display:flex; flex-wrap:wrap; gap:4px 12px; flex:1 1 180px; min-width:0;}
+  .legend-chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-secondary); cursor:pointer; min-height:22px; max-width:100%;}
+  .legend-chip .name{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;}
+  .legend-chip .cnt{font-weight:800; color:var(--text-primary); font-variant-numeric:tabular-nums; flex:none;}
   .legend-chip .dot{width:10px; height:10px; border-radius:50%; flex:none; box-shadow:inset 0 0 0 1px rgba(20,10,25,0.16);}
   /* パークの色（黄色など明るい色）が明るい背景に溶けないよう、点・見本には薄い縁を付ける。文字はパークの色にしない */
+
+  /* ==== 読み込み中（ログイン直後にデータを取り直すときだけ出る） ==== */
+  .skeleton{background:var(--gridline); border-radius:8px; position:relative; overflow:hidden;}
+  .skeleton::after{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+    transform:translateX(-100%); animation:skeleton-shine 1.3s infinite;
+  }
+  @media (prefers-color-scheme: dark){ .skeleton::after{ background:linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent); } }
+  @keyframes skeleton-shine{ to{ transform:translateX(100%); } }
+  @media (prefers-reduced-motion: reduce){ .skeleton::after{ animation:none; } }
+  .loading-donut{display:flex; gap:18px; align-items:center;}
+  .loading-donut .ring{width:120px; height:120px; border-radius:50%; flex:none;}
+  .loading-donut .lines{flex:1; display:flex; flex-direction:column; gap:10px;}
+  .loading-donut .lines .skeleton{height:12px;}
+  .loading-card{height:74px; border-radius:var(--radius); margin-bottom:10px;}
+  .loading-note{text-align:center; font-size:12px; color:var(--text-muted); margin:6px 0 0;}
 
   /* ==== グラフ共通 ==== */
   .chart-card{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:16px;}
@@ -527,14 +568,14 @@
   <section class="screen active" id="screen-login">
     <div class="auth-wrap">
       <div class="auth-logo">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.9 7.4.5-5.7 4.8 1.9 7.2L12 16.9 5.8 20.9l1.9-7.2L2 8.9l7.4-.5z"/></svg>
+        <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="D-COUNT"><defs><linearGradient id="dcLogoG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6f91"/><stop offset="1" stop-color="#a98bf0"/></linearGradient><clipPath id="dcLogoC"><path d="M12 18H52a4 4 0 0 1 4 4v6a4 4 0 0 0 0 8v6a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-6a4 4 0 0 0 0-8v-6a4 4 0 0 1 4-4z"/></clipPath></defs><rect width="64" height="64" rx="14" fill="url(#dcLogoG)"/><path d="M12 18H52a4 4 0 0 1 4 4v6a4 4 0 0 0 0 8v6a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-6a4 4 0 0 0 0-8v-6a4 4 0 0 1 4-4z" fill="#fff"/><rect x="42" y="16" width="16" height="32" fill="#e3d9fc" clip-path="url(#dcLogoC)"/><path d="M19.5 24.5h4.5a7.5 7.5 0 0 1 0 15h-4.5z" fill="none" stroke="#ff6f91" stroke-width="4.2" stroke-linejoin="round"/><path d="M49 28.5v7M45.5 32h7" stroke="#8f6fe0" stroke-width="2.6" stroke-linecap="round"/></svg>
       </div>
       <h1 class="auth-title">D-COUNT</h1>
       <p class="auth-subtitle">ディズニーパーク入園記録</p>
       <div class="auth-card">
         <div class="field">
           <label for="loginName">名前</label>
-          <input type="text" id="loginName" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="登録した名前" enterkeyhint="next" onkeydown="onLoginNameKey(event)">
+          <input type="text" id="loginName" autocomplete="username" autocapitalize="off" spellcheck="false" enterkeyhint="next" onkeydown="onLoginNameKey(event)">
         </div>
         <div class="field">
           <label for="loginPassword">パスワード</label>
@@ -560,7 +601,7 @@
       <div class="auth-card">
         <div class="field">
           <label for="regName">名前</label>
-          <input type="text" id="regName" placeholder="例）やまだ" autocomplete="username" autocapitalize="off" spellcheck="false">
+          <input type="text" id="regName" autocomplete="username" autocapitalize="off" spellcheck="false">
         </div>
         <div class="field">
           <label for="regPassword">パスワード</label>
@@ -603,6 +644,7 @@
       <div class="label" id="recordsYearLabel"></div>
       <button class="icon-btn" onclick="shiftRecordsYear(1)">›</button>
     </div>
+    <div class="records-summary" id="recordsSummary" aria-live="polite"></div>
     <div class="filter-bar">
       <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleFilterPanel()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
@@ -622,7 +664,6 @@
       </div>
       <button class="filter-clear-btn" onclick="clearRecordFilters()">すべて解除</button>
     </div>
-    <div class="records-legend" id="recordsLegend"></div>
     <div id="recordsList"></div>
   </section>
 
@@ -1066,6 +1107,7 @@
     state.currentUser = null;
     clearSession();
     MASTER_PARKS = []; MASTER_PASSTYPES = []; MASTER_SHOWS = []; userRecordsCache = [];
+    state.dataLoading = false;
     state.recordFilters = { parks: [], passTypes: [] }; // 次にログインする人へ絞り込み条件を持ち越さない
     state.accounts = null; state.accountsError = ''; state.accountBusy = false; state.accountTarget = null;
     closeAllModals();
@@ -1112,8 +1154,46 @@
   }
 
   /**
-   * マスタ（Masters.list 1回）と自分の記録（Records.list 1回）をまとめて取得する。ログイン成功時・再読み込み時に呼ぶ。
-   * トークン切れでログイン画面に戻った場合は false を返す（呼び出し側はホームへ進まない）。
+   * ログイン・新規登録・再読み込み時のセッション確認が成功したあと、ホーム画面に入る（2026-11-12〜）。
+   * サーバーは Auth.login / Auth.register / Auth.session の応答に bootstrap:{masters, records} を含めるので、
+   * それがあれば追加の通信をせずにすぐホームを出す。
+   * 以前はログイン後に Masters.list と Records.list を並列に送っていたが、サーバーの doPost はスクリプトロックで
+   * 1件ずつ処理するため実際には順番待ちになり、「ログイン→マスタ→記録」の3往復分を待っていた。
+   * bootstrap が無い・error がある（サーバー側で取得に失敗した）ときだけ、ホームを読み込み中の表示で先に出してから
+   * 従来の loadAppData() で取り直し、取れたら描き直す。welcomeMsg のトーストはホームに切り替えるのと同時に出す。
+   */
+  async function enterApp(data, welcomeMsg){
+    const epoch = state.authEpoch;
+    const ready = applyBootstrap(data && data.bootstrap);
+    state.dataLoading = !ready;
+    navigate('home');
+    if(welcomeMsg) toast(welcomeMsg);
+    if(ready) return;
+    const ok = await loadAppData();
+    if(epoch !== state.authEpoch) return; // 取り直しの間にログアウト・期限切れになった（resetToLoggedOutが片付け済み）
+    state.dataLoading = false;
+    if(ok) refreshCurrentScreen();
+  }
+  /** 応答の bootstrap（{masters:{parks,passTypes,shows}, records:[...]}）を取り込む。使えない形なら false。 */
+  function applyBootstrap(b){
+    if(!b || typeof b !== 'object' || b.error || !b.masters || !Array.isArray(b.records)) return false;
+    if(!applyMasters({ ok:true, data:b.masters })) return false;
+    userRecordsCache = b.records;
+    return true;
+  }
+  /** 表示中の画面をデータに合わせて描き直す（スクロール位置は変えない）。 */
+  function refreshCurrentScreen(){
+    if(state.screen === 'home') refreshHome();
+    if(state.screen === 'records') refreshRecords();
+    if(state.screen === 'summary') refreshSummary();
+    // 設定画面はマスタ一覧だけ描き直す（refreshSettings はアカウント一覧の取り直しまで行うため使わない）
+    if(state.screen === 'settings' && state.currentUser && state.currentUser.role === 'admin'){ renderMasterTabs(); renderMasterList(); }
+  }
+
+  /**
+   * マスタ（Masters.list 1回）と自分の記録（Records.list 1回）をまとめて取得する。
+   * ログイン・再読み込み時の応答に bootstrap が無かったとき（enterApp）だけ使う。
+   * トークン切れでログイン画面に戻った場合は false を返す。
    */
   async function loadAppData(){
     const [mastersRes, recordsRes] = await Promise.all([
@@ -1160,6 +1240,7 @@
     accountBusy: false,    // アカウント管理の操作を送信中（全ボタンを無効にして二重送信を防ぐ）
     accountTarget: null,   // パスワード再設定の対象
     authBusy: false,       // ログイン・新規登録を送信中
+    dataLoading: false,    // ログイン直後に、応答にデータが無くマスタ・記録を取り直している間（ホーム・記録は読み込み中の表示）
     recordsYear: CURRENT_YEAR,
     summaryYearFilter: 'all',
     editingRecordId: null,
@@ -1358,6 +1439,7 @@
     if(!password.trim()){ errEl.textContent = 'パスワードを入力してください'; return; }
     errEl.textContent = '';
     setAuthBusy('loginBtn', true, 'ログイン', 'ログイン中…');
+    let entering = null;
     try{
       const res = await apiPost('Auth', 'login', { name:name, password:password });
       if(!res.ok || !res.data || !res.data.token){
@@ -1379,11 +1461,12 @@
       passEl.classList.remove('input-error');
       passEl.value = '';
       startSession(res.data);
-      toast(state.currentUser.name + 'さん、ようこそ！');
-      if(await loadAppData()) navigate('home');
+      // 応答の bootstrap でそのままホームへ（無ければホームを先に出して取り直す）。ボタンはホームに切り替えた時点で戻す
+      entering = enterApp(res.data, state.currentUser.name + 'さん、ようこそ！');
     } finally {
       setAuthBusy('loginBtn', false, 'ログイン', 'ログイン中…');
     }
+    if(entering) await entering;
   };
 
   window.handleRegister = async function(){
@@ -1397,6 +1480,7 @@
     if(password !== confirmPw){ errEl.textContent = '確認用のパスワードが一致しません'; return; }
     errEl.textContent = '';
     setAuthBusy('regBtn', true, '登録する', '登録中…');
+    let entering = null;
     try{
       const res = await apiPost('Auth', 'register', { name:name, password:password });
       if(!res.ok || !res.data || !res.data.token){
@@ -1408,11 +1492,11 @@
       document.getElementById('regPasswordConfirm').value = '';
       // 登録完了と同時に自動ログインする（サーバーがトークンを返す）
       startSession(res.data);
-      toast(state.currentUser.name + 'さんを登録しました');
-      if(await loadAppData()) navigate('home');
+      entering = enterApp(res.data, state.currentUser.name + 'さんを登録しました');
     } finally {
       setAuthBusy('regBtn', false, '登録する', '登録中…');
     }
+    if(entering) await entering;
   };
 
   window.handleLogout = function(){
@@ -1433,6 +1517,18 @@
     const u = state.currentUser;
     document.getElementById('homeGreet').textContent = CURRENT_YEAR + '年 ・ ' + u.name + 'さん（' + (u.role === 'admin' ? '管理者' : '一般') + '）';
 
+    if(state.dataLoading){
+      // ログイン直後にデータを取り直している間。取得できたら refreshCurrentScreen() で描き直す
+      document.getElementById('homeHeroValue').innerHTML = '…<small>イン</small>';
+      document.getElementById('homeHeroDelta').textContent = '読み込み中…';
+      document.getElementById('homeDonutCard').innerHTML =
+        '<div class="loading-donut" aria-label="読み込み中"><div class="ring skeleton"></div>' +
+        '<div class="lines"><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:65%"></div><div class="skeleton" style="width:50%"></div></div></div>' +
+        '<p class="loading-note">読み込み中…</p>';
+      document.getElementById('homeRecentList').innerHTML = loadingCardsHtml(3);
+      return;
+    }
+
     const thisYear = recordsOfYear(CURRENT_YEAR);
     const lastYear = recordsOfYear(CURRENT_YEAR - 1);
     document.getElementById('homeHeroValue').innerHTML = thisYear.length + '<small>イン</small>';
@@ -1450,6 +1546,12 @@
     } else {
       listEl.innerHTML = recent.map(function(r){ return recordCardHtml(r); }).join('');
     }
+  }
+
+  function loadingCardsHtml(n){
+    let html = '';
+    for(let i = 0; i < n; i++) html += '<div class="skeleton loading-card" aria-hidden="true"></div>';
+    return html;
   }
 
   function renderDonutCard(container, records, emptyMsg){
@@ -1541,10 +1643,16 @@
   function refreshRecords(){
     document.getElementById('recordsYearLabel').textContent = state.recordsYear + '年';
     renderFilterPanel();
-    renderRecordsLegend();
+    const listEl = document.getElementById('recordsList');
+    if(state.dataLoading){
+      // ログイン直後にデータを取り直している間（取得できたら refreshCurrentScreen() で描き直す）
+      document.getElementById('recordsSummary').innerHTML = '';
+      listEl.innerHTML = loadingCardsHtml(3);
+      return;
+    }
     const yearList = recordsOfYear(state.recordsYear).slice().sort(function(a,b){ return a.date.localeCompare(b.date); });
     const list = applyRecordFilters(yearList);
-    const listEl = document.getElementById('recordsList');
+    renderRecordsSummary(yearList, list);
     if(yearList.length === 0){
       listEl.innerHTML = '<div class="empty-hint">' + state.recordsYear + '年の記録はまだありません。</div>';
       return;
@@ -1631,18 +1739,29 @@
     refreshRecords();
   };
 
-  /* ---- 記録一覧：パークの色の凡例（一覧のドット・絞り込みチップ・ホームのドーナツと同じ色） ----
-   * 表示中の年の記録に出てくるパークだけを、マスタの並び順で出す。 */
-  function renderRecordsLegend(){
-    const el = document.getElementById('recordsLegend');
-    const ids = [];
-    recordsOfYear(state.recordsYear).forEach(function(r){ if(ids.indexOf(r.parkId) === -1) ids.push(r.parkId); });
-    ids.sort(function(a, b){ return parkSortOrder(a) - parkSortOrder(b); });
-    if(ids.length === 0){ el.innerHTML = ''; return; }
-    el.innerHTML = ids.map(function(id){
-      return '<span class="legend-chip" onclick="toast(\'' + jsAttrEscape(parkName(id)) + '\')">' +
-        '<span class="dot" style="background:' + parkColor(id) + '"></span>' + escapeHtml(parkShortLabel(id)) + '</span>';
+  /* ---- 記録一覧：選んでいる年の集計（2026-11-12〜。旧「パークの色の凡例」を兼ねる） ----
+   * 合計イン数と、パークごとのイン数（パークの色の点＋略称→日本語名＋件数。多い順・同数はマスタの並び順）。
+   * 絞り込み中は絞り込み後の件数を出し、「絞り込み中」の札と年全体の件数を小さく添える。
+   * 年の記録が0件のときは何も出さない（一覧の「◯年の記録はまだありません。」と重ねない）。
+   * パークの色は点にだけ使い、文字は通常の文字色にする（黄色が読めないため）。点をタップするとパークの正式名を出す。 */
+  function renderRecordsSummary(yearList, list){
+    const el = document.getElementById('recordsSummary');
+    if(yearList.length === 0){ el.innerHTML = ''; return; }
+    const f = state.recordFilters;
+    const filtered = f.parks.length + f.passTypes.length > 0;
+    const byPark = {};
+    list.forEach(function(r){ byPark[r.parkId] = (byPark[r.parkId] || 0) + 1; });
+    const ids = Object.keys(byPark).sort(function(a, b){ return (byPark[b] - byPark[a]) || (parkSortOrder(a) - parkSortOrder(b)); });
+    const total = '<span class="rs-total"><span class="rs-num">' + list.length + '</span><span class="rs-unit">イン</span>' +
+      (filtered ? '<span class="rs-of">/ 全' + yearList.length + 'イン</span>' : '') + '</span>';
+    const parks = ids.map(function(id){
+      return '<span class="legend-chip" onclick="toast(\'' + jsAttrEscape(parkName(id) + '：' + byPark[id] + 'イン') + '\')">' +
+        '<span class="dot" style="background:' + parkColor(id) + '"></span>' +
+        '<span class="name">' + escapeHtml(parkShortLabel(id)) + '</span><span class="cnt">' + byPark[id] + '</span></span>';
     }).join('');
+    el.innerHTML = (filtered ? '<span class="rs-tag">絞り込み中</span>' : '') + total +
+      (parks ? '<span class="rs-parks">' + parks + '</span>' : '');
+    el.setAttribute('aria-label', state.recordsYear + '年' + (filtered ? '（絞り込み中）' : '') + ' ' + list.length + 'イン');
   }
 
   // keepId: 編集中の記録が参照している項目のid。無効化済みでも選択肢に残し（「（無効）」付き）、
@@ -1657,6 +1776,7 @@
   }
 
   window.openRecordModal = function(recordId){
+    if(state.dataLoading){ toast('読み込み中です。少しお待ちください'); return; } // マスタが空のまま入力させない
     const editing = recordId ? findById(userRecords(), recordId) : null;
     if(recordId && !editing){ toast('記録が見つかりませんでした'); return; }
     state.editingRecordId = recordId;
@@ -4007,7 +4127,7 @@
     state.currentUser = normalizeUser(res.data.user);
     state.recordsYear = CURRENT_YEAR;
     persistSession();
-    if(await loadAppData()) navigate('home');
+    await enterApp(res.data, null); // 応答の bootstrap があれば追加の通信なしでホームへ
   });
 </script>
 </body>
